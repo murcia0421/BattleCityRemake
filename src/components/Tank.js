@@ -1,20 +1,19 @@
 import React from 'react';
-import playerTankImg from '../assets/images/tank.png'; 
+import tankImage from '../assets/images/tank.png';  // Asegúrate de tener la ruta correcta de la imagen del tanque
+import '../styles/Tank.css';
 
-const Tank = ({ position }) => {
+const Tank = ({ x, y }) => {
   return (
-    <img
-      src={playerTankImg} 
-      alt="Player Tank"
+    <div
       className="tank"
       style={{
-        top: `${position.y}px`,
-        left: `${position.x}px`,
         position: 'absolute',
-        width: '40px',
-        height: '40px',
+        left: `${x * 32}px`,  // Ajusta el tamaño del bloque según el tamaño del tablero (32px o el que sea)
+        top: `${y * 32}px`,
       }}
-    />
+    >
+      <img src={tankImage} alt="Tank" />
+    </div>
   );
 };
 

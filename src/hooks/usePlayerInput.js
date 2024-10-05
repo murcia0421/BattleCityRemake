@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const usePlayerInput = (onAction) => {
+    const shootCooldownRef = useRef(false);  // Para controlar el enfriamiento de disparos
+
     useEffect(() => {
         const handleKeyDown = (event) => {
             let action = null;
@@ -17,8 +19,14 @@ const usePlayerInput = (onAction) => {
                 case 'ArrowRight':
                     action = { type: 'MOVE', direction: 'right' };
                     break;
-                case ' ':
-                    action = { type: 'SHOOT' };
+                case ' ':  // Barra espaciadora para disparar
+                    if (!shootCooldownRef.current) {
+                        action = { type: 'SHOOT' };
+                        shootCooldownRef.current = true;
+                        setTimeout(() => {
+                            shootCooldownRef.current = false;
+                        }, 500);  // Enfriamiento de 500 ms para disparar
+                    }
                     break;
                 default:
                     break;
@@ -33,6 +41,8 @@ const usePlayerInput = (onAction) => {
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, [onAction]);
+
+    return null;
 };
 
 export default usePlayerInput;

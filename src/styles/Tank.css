@@ -1,0 +1,10 @@
+.tank {
+    width: 32px;  /* Ajusta según el tamaño de tus tiles */
+    height: 32px;
+  }
+  
+  .tank img {
+    width: 100%;
+    height: 100%;
+  }
+  
