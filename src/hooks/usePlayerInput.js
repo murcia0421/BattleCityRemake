@@ -4,19 +4,23 @@ const usePlayerInput = (onAction) => {
     const shootCooldownRef = useRef(false);  // Para controlar el enfriamiento de disparos
 
     useEffect(() => {
+        console.log('useEffect montado, listener de keydown registrado');  // Para verificar que el hook se ejecuta
+
         const handleKeyDown = (event) => {
+            console.log(`Tecla presionada: ${event.key}`);      
+
             let action = null;
             switch (event.key) {
-                case 'ArrowUp':
+                case 'w':
                     action = { type: 'MOVE', direction: 'up' };
                     break;
-                case 'ArrowDown':
+                case 's':
                     action = { type: 'MOVE', direction: 'down' };
                     break;
-                case 'ArrowLeft':
+                case 'a':
                     action = { type: 'MOVE', direction: 'left' };
                     break;
-                case 'ArrowRight':
+                case 'd':
                     action = { type: 'MOVE', direction: 'right' };
                     break;
                 case ' ':  // Barra espaciadora para disparar
@@ -32,6 +36,7 @@ const usePlayerInput = (onAction) => {
                     break;
             }
             if (action) {
+                console.log('Acción detectada:', action);  // Para verificar qué acción se está enviando
                 onAction(action);
             }
         };

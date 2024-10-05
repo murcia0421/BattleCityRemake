@@ -1,17 +1,20 @@
 import React from 'react';
-import tankImage from '../assets/images/tank.png';  // Asegúrate de tener la ruta correcta de la imagen del tanque
+import tankImage from '../assets/images/tank.png';  
 import '../styles/Tank.css';
 
-const Tank = ({ x, y }) => {
+const TILE_SIZE = 32; // Ajusta el tamaño según sea necesario
+
+const Tank = ({ x, y, direction }) => {
+  console.log('Posición del tanque:', x, y, 'Dirección:', direction);
+
+  const style = {
+    left: `${x * TILE_SIZE}px`,
+    top: `${y * TILE_SIZE}px`,
+    position: 'absolute'
+  };
+
   return (
-    <div
-      className="tank"
-      style={{
-        position: 'absolute',
-        left: `${x * 32}px`,  // Ajusta el tamaño del bloque según el tamaño del tablero (32px o el que sea)
-        top: `${y * 32}px`,
-      }}
-    >
+    <div className="tank" style={style}>
       <img src={tankImage} alt="Tank" />
     </div>
   );

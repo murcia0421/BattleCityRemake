@@ -1,26 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import Tank from './Tank';
 import usePlayerInput from '../hooks/usePlayerInput';
 import SockJS from 'sockjs-client';
-import Stomp from 'stompjs';
+import { Stomp } from '@stomp/stompjs';
+import Tank from './Tank';  // Import Tank component
 
 export default function PlayerController() {
     const [playerPosition, setPlayerPosition] = useState({ x: 5, y: 5 });
     const [playerDirection, setPlayerDirection] = useState('up');
     const [stompClient, setStompClient] = useState(null);
 
-    // Inicializar la conexión WebSocket al montar el componente
     useEffect(() => {
-        const socket = new SockJS('http://localhost:8080/battle-city-websocket');
+        console.log('Conectando a WebSocket...');
+        const socket = new SockJS('http://localhost:3001/battle-city-websocket');
         const client = Stomp.over(socket);
 
         client.connect({}, () => {
+            console.log('Conectado a WebSocket');
             client.subscribe('/topic/game-updates', (message) => {
                 const updatedState = JSON.parse(message.body);
-                // Actualizar la posición y dirección del tanque según el estado recibido del servidor
-                setPlayerPosition(updatedState.position);
-                setPlayerDirection(updatedState.direction);
+                const playerId = 'playerId1';
+                const player = updatedState.players ? updatedState.players[playerId] : undefined;
+                if (player) {
+                    console.log("Datos recibidos del servidor:", player);
+                    setPlayerPosition({ x: player.x, y: player.y });
+                    setPlayerDirection(player.direction);
+                    console.log('Estado del jugador actualizado desde WebSocket:', player);
+                } else {
+                    console.error('Datos de posición o dirección no definidos en player:', player);
+                }
             });
+            
+        }, (error) => {
+            console.error('Error al conectar:', error);
         });
 
         setStompClient(client);
@@ -33,18 +44,25 @@ export default function PlayerController() {
     }, []);
 
     const handlePlayerAction = (action) => {
+        const playerId = 'playerId1'; // Debe ser el ID del jugador actual
+        const actionWithId = { ...action, playerId };
+        console.log('Acción enviada al servidor:', actionWithId);
         if (stompClient && stompClient.connected) {
-            stompClient.send('/app/player-action', {}, JSON.stringify(action));
+            stompClient.send('/app/player-action', {}, JSON.stringify(actionWithId));
         }
     };
+    
+    
 
-    // El hook captura la entrada del jugador y dispara acciones
     usePlayerInput(handlePlayerAction);
 
     return (
         <div>
-            <p>Controla al jugador con las teclas de flechas. Presiona Espacio para disparar.</p>
-            <Tank x={playerPosition.x} y={playerPosition.y} direction={playerDirection} />
+            <p>Controla al jugador con las teclas de w, a, s, d. Presiona Espacio para disparar.</p>
+            {playerPosition && playerDirection && (
+                <Tank x={playerPosition.x} y={playerPosition.y} direction={playerDirection} />
+            )}
+            {console.log('Renderizando tanque en posición:', playerPosition, 'con dirección:', playerDirection)}
         </div>
     );
 }

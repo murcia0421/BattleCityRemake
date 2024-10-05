@@ -4,7 +4,7 @@ import wallSteelImage from '../assets/images/map/wall_stell.png';
 import treeImage from '../assets/images/map/trees.png';
 import baseImage from '../assets/images/map/base.png';  // Importa la imagen de la base
 import '../styles/GameBoard.css';
-import Tank from './Tank';  
+import PlayerController from './PlayerController';
 
 
 // El mapa del juego representado en una matriz 2D
@@ -55,8 +55,6 @@ const getTileImage = (tile) => {
 };
 
 const GameBoard = () => {
-  const tankPosition = { x: 10, y: 10 };  // Puedes cambiar las coordenadas del tanque según tu lógica
-
   return (
     <div className="game-board" style={{ position: 'relative' }}>
       {mapData.map((row, rowIndex) => (
@@ -71,8 +69,8 @@ const GameBoard = () => {
           })}
         </div>
       ))}
-      {/* Renderiza el tanque */}
-      <Tank x={tankPosition.x} y={tankPosition.y} />
+      {/* Render PlayerController */}
+      <PlayerController />
     </div>
   );
 };
