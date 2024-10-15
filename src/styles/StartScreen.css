@@ -1,0 +1,44 @@
+body {
+    font-family: 'Press Start 2P', cursive;
+}
+
+.start-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #2a2a2a; /* Fondo oscuro */
+    color: #00ff00; /* Color verde típico de los juegos retro */
+    text-align: center;
+}
+
+.start-screen h1 {
+    font-size: 2rem; /* Tamaño de fuente para el título */
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5); /* Sombra para un efecto 3D */
+    color: #b22222; /* Color rojo ladrillo para el título */
+}
+
+.start-screen p {
+    font-size: 1rem; /* Tamaño de fuente para el párrafo */
+    margin-bottom: 40px;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
+    color: white; /* Color blanco para el párrafo */
+}
+
+.start-screen button {
+    padding: 15px 30px;
+    font-size: 2rem; /* Tamaño de fuente del botón igual al título */
+    background-color: #ffcc00; /* Amarillo brillante para el botón */
+    color: #282c34; /* Color oscuro para el texto del botón */
+    border: 2px solid #00ff00; /* Borde verde */
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.1s; /* Transición suave */
+}
+
+.start-screen button:hover {
+    background-color: #ffaa00; /* Cambio de color al pasar el mouse */
+    transform: scale(1.05); /* Efecto de aumento al pasar el mouse */
+}

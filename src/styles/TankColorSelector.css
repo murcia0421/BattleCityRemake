@@ -1,0 +1,12 @@
+.tank-color-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.color-options {
+  display: flex;
+  gap: 10px;
+}

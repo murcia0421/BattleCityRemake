@@ -48,8 +48,6 @@ class WebSocketClient {
             this.messageQueue.push(action);
         }
     }
-
-    // Envía todos los mensajes pendientes de la cola
     static flushQueue() {
         while (this.messageQueue.length > 0 && this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify(this.messageQueue.shift()));
