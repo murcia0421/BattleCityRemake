@@ -55,23 +55,23 @@ const getTileImage = (tile) => {
 };
 
 const GameBoard = () => {
-  const [playerPosition, setPlayerPosition] = useState({ x: 0, y: 0 });
+  const [playerPosition, setPlayerPosition] = useState({ x: 2, y: 2 });
 
   const handleKeyDown = (event) => {
     const { key } = event;
     let newPosition = { ...playerPosition };
 
     switch (key) {
-      case 'ArrowUp':
+      case 'w':
         newPosition.y = Math.max(0, playerPosition.y - 1);
         break;
-      case 'ArrowDown':
+      case 's':
         newPosition.y = Math.min(mapData.length - 1, playerPosition.y + 1);
         break;
-      case 'ArrowLeft':
+      case 'a':
         newPosition.x = Math.max(0, playerPosition.x - 1);
         break;
-      case 'ArrowRight':
+      case 'd':
         newPosition.x = Math.min(mapData[0].length - 1, playerPosition.x + 1);
         break;
       default:

@@ -5,7 +5,7 @@ import { Stomp } from '@stomp/stompjs';
 import Tank from './Tank';  // Import Tank component
 
 export default function PlayerController() {
-    const [playerPosition, setPlayerPosition] = useState({ x: 5, y: 5 });
+    const [playerPosition, setPlayerPosition] = useState({ x: 0, y: 0 });
     const [playerDirection, setPlayerDirection] = useState('up');
     const [stompClient, setStompClient] = useState(null);
 
