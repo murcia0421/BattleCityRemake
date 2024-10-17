@@ -9,8 +9,8 @@
 }
 
 .game-board__tile {
-  width: 32px;  /* Tamaño fijo o ajustable según el tamaño de tus imágenes */
-  height: 32px; /* Tamaño fijo o ajustable según el tamaño de tus imágenes */
+  width: 30px;  /* Tamaño fijo o ajustable según el tamaño de tus imágenes */
+  height: 30px; /* Tamaño fijo o ajustable según el tamaño de tus imágenes */
 }
 
 .game-board__tile img {

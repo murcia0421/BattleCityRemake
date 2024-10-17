@@ -55,7 +55,7 @@ const getTileImage = (tile) => {
 };
 
 const GameBoard = () => {
-  const [playerPosition, setPlayerPosition] = useState({ x: 2, y: 2 });
+  /*const [playerPosition, setPlayerPosition] = useState({ x: 2, y: 2 });*/
 /*
   const handleKeyDown = (event) => {
     const { key } = event;

@@ -7,7 +7,7 @@ import Tank from './Tank';  // Import Tank component
 import { mapData, isWall } from './map';
 
 export default function PlayerController() {
-    const [playerPosition, setPlayerPosition] = useState({ x: 5, y: 5 });
+    const [playerPosition, setPlayerPosition] = useState({ x: 2, y: 2 });
     const [playerDirection, setPlayerDirection] = useState('up');
     const [bullets, setBullets] = useState([]); // Estado para almacenar los proyectiles activos
     const [stompClient, setStompClient] = useState(null);
@@ -50,21 +50,49 @@ export default function PlayerController() {
         const playerId = 'playerId1'; // Debe ser el ID del jugador actual
         const actionWithId = { ...action, playerId };
         console.log('Acción enviada al servidor:', actionWithId);
-
-        // Actualiza la dirección solo si el jugador se mueve
+    
+        // Actualiza la dirección y la posición si el jugador se mueve
         if (action.type === 'MOVE') {
             setPlayerDirection(action.direction); // Actualiza la dirección del tanque
+    
+            // Calcula la nueva posición basada en la dirección
+            setPlayerPosition((prevPosition) => {
+                let newPosition = { ...prevPosition };
+                switch (action.direction) {
+                    case 'up':
+                        newPosition.y = prevPosition.y - 1;
+                        break;
+                    case 'down':
+                        newPosition.y = prevPosition.y + 1;
+                        break;
+                    case 'left':
+                        newPosition.x = prevPosition.x - 1;
+                        break;
+                    case 'right':
+                        newPosition.x = prevPosition.x + 1;
+                        break;
+                    default:
+                        break;
+                }
+                // Revisa si el nuevo movimiento no es hacia un muro
+                if (!isWall(newPosition.x, newPosition.y)) {
+                    return newPosition;
+                } else {
+                    return prevPosition; // Si es un muro, el tanque no se mueve
+                }
+            });
         }
-
+    
         if (action.type === 'SHOOT') {
             const bullet = createBullet(playerPosition, playerDirection);
             setBullets([...bullets, bullet]); // Añadir el nuevo proyectil al estado de los proyectiles
         }
-
+    
         if (stompClient && stompClient.connected) {
             stompClient.send('/app/player-action', {}, JSON.stringify(actionWithId));
         }
     };
+    
     
 
     const createBullet = (position, direction) => {
