@@ -56,7 +56,7 @@ const getTileImage = (tile) => {
 
 const GameBoard = () => {
   const [playerPosition, setPlayerPosition] = useState({ x: 2, y: 2 });
-
+/*
   const handleKeyDown = (event) => {
     const { key } = event;
     let newPosition = { ...playerPosition };
@@ -91,7 +91,7 @@ const GameBoard = () => {
   useEffect(() => {
     console.log(`Posición del jugador: (${playerPosition.x}, ${playerPosition.y})`);
   }, [playerPosition]);
-
+*/
   return (
     <div className="game-board" style={{ position: 'relative' }}>
       {mapData.map((row, rowIndex) => (
@@ -102,9 +102,10 @@ const GameBoard = () => {
               <div className="game-board__tile" key={colIndex}>
                 {tileImage && <img src={tileImage} alt="tile" />}
                 {/* Renderizar el jugador en la posición actual */}
-                {rowIndex === playerPosition.y && colIndex === playerPosition.x && (
-                  <img src={playerImage} alt="player" className="player" />
-                )}
+                {//rowIndex === playerPosition.y && colIndex === playerPosition.x && ( 
+                  //<img src={playerImage} alt="player" className="player" />
+                //)
+                } 
               </div>
             );
           })}

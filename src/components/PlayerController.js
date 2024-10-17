@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import usePlayerInput from '../hooks/usePlayerInput';
 import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
+import Bullet from './Bullet';
 import Tank from './Tank';  // Import Tank component
+import { mapData, isWall } from './map';
 
 export default function PlayerController() {
-    const [playerPosition, setPlayerPosition] = useState({ x: 0, y: 0 });
+    const [playerPosition, setPlayerPosition] = useState({ x: 5, y: 5 });
     const [playerDirection, setPlayerDirection] = useState('up');
+    const [bullets, setBullets] = useState([]); // Estado para almacenar los proyectiles activos
     const [stompClient, setStompClient] = useState(null);
 
     useEffect(() => {
@@ -23,7 +26,7 @@ export default function PlayerController() {
                 if (player) {
                     console.log("Datos recibidos del servidor:", player);
                     setPlayerPosition({ x: player.x, y: player.y });
-                    setPlayerDirection(player.direction);
+                    //setPlayerDirection(player.direction);w
                     console.log('Estado del jugador actualizado desde WebSocket:', player);
                 } else {
                     console.error('Datos de posición o dirección no definidos en player:', player);
@@ -47,14 +50,65 @@ export default function PlayerController() {
         const playerId = 'playerId1'; // Debe ser el ID del jugador actual
         const actionWithId = { ...action, playerId };
         console.log('Acción enviada al servidor:', actionWithId);
+
+        // Actualiza la dirección solo si el jugador se mueve
+        if (action.type === 'MOVE') {
+            setPlayerDirection(action.direction); // Actualiza la dirección del tanque
+        }
+
+        if (action.type === 'SHOOT') {
+            const bullet = createBullet(playerPosition, playerDirection);
+            setBullets([...bullets, bullet]); // Añadir el nuevo proyectil al estado de los proyectiles
+        }
+
         if (stompClient && stompClient.connected) {
             stompClient.send('/app/player-action', {}, JSON.stringify(actionWithId));
         }
     };
     
-    
+
+    const createBullet = (position, direction) => {
+        return { x: position.x, y: position.y, direction: direction };
+    };
 
     usePlayerInput(handlePlayerAction);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setBullets((prevBullets) =>
+                prevBullets.map((bullet) => moveBullet(bullet)).filter((bullet) => isBulletOnBoard(bullet))
+            );
+        }, 100); // Actualizar la posición de los proyectiles cada 100ms
+
+        return () => clearInterval(interval);
+    }, []);
+
+    const moveBullet = (bullet) => {
+        switch (bullet.direction) {
+            case 'up':
+                return { ...bullet, y: bullet.y - 1 };
+            case 'down':
+                return { ...bullet, y: bullet.y + 1 };
+            case 'left':
+                return { ...bullet, x: bullet.x - 1 };
+            case 'right':
+                return { ...bullet, x: bullet.x + 1 };
+            default:
+                return bullet;
+        }
+    };
+
+    const isBulletOnBoard = (bullet) => {
+        return bullet.x >= 0 && bullet.x < 26 && bullet.y >= 0 && bullet.y < 26; // Dimensiones del tablero
+    };
+
+    const isWall = (x, y) => {
+        // Asegúrate de que las coordenadas estén dentro del rango del mapa
+        if (x < 0 || x >= mapData[0].length || y < 0 || y >= mapData.length) {
+            return true; // Fuera del rango se considera un muro
+        }
+        return mapData[y][x] === 1 || mapData[y][x] === 2; // Muro de ladrillo o acero
+    };
 
     return (
         <div>
@@ -63,6 +117,11 @@ export default function PlayerController() {
                 <Tank x={playerPosition.x} y={playerPosition.y} direction={playerDirection} />
             )}
             {console.log('Renderizando tanque en posición:', playerPosition, 'con dirección:', playerDirection)}
+
+            {bullets.map((bullet, index) => (
+                <Bullet key={index} x={bullet.x} y={bullet.y} direction={bullet.direction} />
+            ))}
+
         </div>
     );
 }
