@@ -8,37 +8,66 @@ body {
     align-items: center;
     justify-content: center;
     height: 100vh;
-    background-color: #2a2a2a; /* Fondo oscuro */
-    color: #00ff00; /* Color verde típico de los juegos retro */
+    background-color: #000000;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    color: #00ff00;
     text-align: center;
+    position: relative;
+}
+
+.collage {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-gap: 10px;
+    margin-bottom: 20px;
+    width: 80%;
+    z-index: 1;
+}
+
+.collage img {
+    width: 100%;
+    border: 2px solid #b22222;
+    border-radius: 5px;
+}
+
+.text-box {
+    border: 5px solid #b22222;
+    border-radius: 10px;
+    padding: 20px;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 1;
+    position: relative;
 }
 
 .start-screen h1 {
-    font-size: 2rem; /* Tamaño de fuente para el título */
+    font-size: 2rem;
     margin-bottom: 20px;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5); /* Sombra para un efecto 3D */
-    color: #b22222; /* Color rojo ladrillo para el título */
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    color: #b22222;
 }
 
 .start-screen p {
-    font-size: 1rem; /* Tamaño de fuente para el párrafo */
+    font-size: 1rem;
     margin-bottom: 40px;
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
-    color: white; /* Color blanco para el párrafo */
+    color: black;
 }
 
 .start-screen button {
     padding: 15px 30px;
-    font-size: 2rem; /* Tamaño de fuente del botón igual al título */
-    background-color: #ffcc00; /* Amarillo brillante para el botón */
-    color: #282c34; /* Color oscuro para el texto del botón */
-    border: 2px solid #00ff00; /* Borde verde */
+    font-size: 1rem;
+    background-color: rgba(139, 0, 0, 0.8);
+    color: #000;
+    border: 5px solid #b22222;
     border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.1s; /* Transición suave */
+    transition: background-color 0.3s ease, transform 0.1s;
+    font-family: 'Press Start 2P', cursive;
 }
 
 .start-screen button:hover {
-    background-color: #ffaa00; /* Cambio de color al pasar el mouse */
-    transform: scale(1.05); /* Efecto de aumento al pasar el mouse */
+    background-color: #ffffff;
+    transform: scale(1.05);
 }

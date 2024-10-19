@@ -1,12 +1,37 @@
 .tank-color-selector {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   height: 100vh;
+  background-color: #000000;
+}
+
+.color-selector-box {
+  border: 2px solid #ccc;
+  padding: 20px;
+  border-radius: 10px;
+  background-color: #f5f5f5;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
 }
 
 .color-options {
   display: flex;
   gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.color-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s, transform 0.2s;
+  font-family: 'Press Start 2P', cursive;
+}
+
+.color-button:hover {
+  transform: scale(1.05);
 }
