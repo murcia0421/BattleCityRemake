@@ -1,8 +1,8 @@
-// src/App.js
 import React, { useState } from 'react';
 import './App.css';
 import StartScreen from './components/StartScreen';
 import TankColorSelector from './components/TankColorSelector';
+import WaitingRoom from './components/WaitingRoom';
 import GameBoard from './components/GameBoard';
 
 function App() {
