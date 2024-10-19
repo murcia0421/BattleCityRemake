@@ -55,8 +55,8 @@ const getTileImage = (tile) => {
 };
 
 const GameBoard = () => {
-  /*const [playerPosition, setPlayerPosition] = useState({ x: 2, y: 2 });*/
-/*
+  /*const [playerPosition, setPlayerPosition] = useState({ x: 2, y: 2 });
+
   const handleKeyDown = (event) => {
     const { key } = event;
     let newPosition = { ...playerPosition };
@@ -100,20 +100,23 @@ const GameBoard = () => {
             const tileImage = getTileImage(tile);
             return (
               <div className="game-board__tile" key={colIndex}>
+                {/*tile*/}
                 {tileImage && <img src={tileImage} alt="tile" />}
+
                 {/* Renderizar el jugador en la posición actual */}
-                {//rowIndex === playerPosition.y && colIndex === playerPosition.x && ( 
+                {//rowIndex === playerPosition.y && colIndex === playerPosition.x && (
                   //<img src={playerImage} alt="player" className="player" />
                 //)
-                } 
+                }
               </div>
             );
           })}
         </div>
       ))}
       {/* Render PlayerController */}
-      <PlayerController />
+      <PlayerController mapData={mapData}/>
     </div>
+
   );
 };
 
