@@ -1,0 +1,26 @@
+/* Map.css */
+.Map {
+    position: relative;
+    display: flex; 
+    flex-direction: column; 
+    width: calc(32px * 26); 
+    height: calc(32px * 25); 
+    border: 1px solid #000; 
+  }
+  
+  .map-row {
+    display: flex; 
+  }
+  
+  .map-tile {
+    width: 32px; 
+    height: 32px; 
+    position: relative;
+  }
+  
+  .map-tile img {
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; 
+  }
+  

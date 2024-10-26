@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import './App.css';
-import StartScreen from './components/StartScreen';
-import TankColorSelector from './components/TankColorSelector';
-import WaitingRoom from './components/WaitingRoom';
-import GameBoard from './components/GameBoard';
+import StartScreen from './components/StartScreen/StartScreen';
+import TankColorSelector from './components/TankColorSelector/TankColorSelector';
+import GameBoard from './components/GameBoard/GameBoard';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('start');
+  const [tankColor, setTankColor] = useState(null); // Almacenar el color del tanque seleccionado
 
   const handleStart = () => {
     setCurrentScreen('colorSelection');
@@ -14,6 +14,7 @@ function App() {
 
   const handleColorSelect = (color) => {
     console.log(`Color seleccionado: ${color}`);
+    setTankColor(color); // Guardar el color seleccionado
     setCurrentScreen('gameBoard');
   };
 
@@ -24,7 +25,7 @@ function App() {
       case 'colorSelection':
         return <TankColorSelector onColorSelect={handleColorSelect} />;
       case 'gameBoard':
-        return <GameBoard />;
+        return <GameBoard tankColor={tankColor} />; // Pasar el color del tanque a GameBoard
       default:
         return <StartScreen onStart={handleStart} />;
     }

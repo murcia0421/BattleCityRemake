@@ -1,5 +1,5 @@
 import React from 'react';
-import '../styles/TankColorSelector.css';
+import './TankColorSelector.css';
 
 const TankColorSelector = ({ onColorSelect }) => {
   const colors = [

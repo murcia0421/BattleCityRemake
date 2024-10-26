@@ -1,8 +1,8 @@
 import React from 'react';
-import '../styles/StartScreen.css';
-import image1 from '../assets/image1.webp';
-import image2 from '../assets/image5.webp';
-import image3 from '../assets/image3.webp';
+import './StartScreen.css';
+import image1 from '../../assets/image1.webp';
+import image2 from '../../assets/image5.webp';
+import image3 from '../../assets/image3.webp';
 
 const StartScreen = ({ onStart }) => {
   return (

@@ -7,7 +7,7 @@ const usePlayerInput = (onAction) => {
         console.log('useEffect montado, listener de keydown registrado');  // Para verificar que el hook se ejecuta
 
         const handleKeyDown = (event) => {
-            console.log(`Tecla presionada: ${event.key}`);      
+            console.log(`Tecla presionada: ${event.key}`);  // Verifica qué tecla se presionó
 
             let action = null;
             switch (event.key) {
@@ -24,6 +24,7 @@ const usePlayerInput = (onAction) => {
                     action = { type: 'MOVE', direction: 'right' };
                     break;
                 case ' ':  // Barra espaciadora para disparar
+                    event.preventDefault(); // Evita el comportamiento predeterminado (ej. scroll)
                     if (!shootCooldownRef.current) {
                         action = { type: 'SHOOT' };
                         shootCooldownRef.current = true;
@@ -36,7 +37,7 @@ const usePlayerInput = (onAction) => {
                     break;
             }
             if (action) {
-                console.log('Acción detectada:', action);  // Para verificar qué acción se está enviando
+                console.log('Acción detectada:', action);  // Verifica qué acción se está enviando
                 onAction(action);
             }
         };

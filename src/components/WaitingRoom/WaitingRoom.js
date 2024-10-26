@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import '../styles/WaitingRoom.css';
+import './WaitingRoom.css';
 
 const WaitingRoom = ({ requiredPlayers = 2, onStartGame }) => {
   const [players, setPlayers] = useState([]);

@@ -1,0 +1,12 @@
+.player {
+    position: relative; /* Asegura que los hijos se posicionen en relación a este contenedor */
+    width: 32px; /* Ancho del tanque */
+    height: 32px; /* Alto del tanque */
+  }
+  
+  .player img {
+    width: 100%; /* Ajusta la imagen del tanque para ocupar todo el contenedor */
+    height: auto; /* Mantiene la proporción de la imagen */
+    display: block; /* Evita espacios en blanco debajo de la imagen */
+  }
+  
