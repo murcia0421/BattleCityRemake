@@ -5,16 +5,21 @@ import { Stomp } from '@stomp/stompjs';
 import Bullet from '../components/Bullets/Bullet';
 import Player from '../components/Player/Player';
 import CollisionUtils from '../utils/collisionUtils';
+import mapDataLocal from '../components/Map/MapData';
 
 export default function PlayerController({ playerId, initialPosition, mapData }) {
-    const [player, setPlayer] = useState({
-        id: playerId,
-        position: initialPosition,
-        direction: 'up'
-    });
+    /*console.warn('playerId-->: ', playerId);
+    console.warn('initialPosition--->: ', initialPosition);
+    console.warn('mapData--->: ', mapDataLocal);*/
+    //Jugador
+    const [player, setPlayer] = useState({ id: playerId, position: initialPosition, direction: 'down' });
+
     const [bullets, setBullets] = useState([]);
-    const collisionUtils = new CollisionUtils(mapData);
+    //const collisionUtils = new CollisionUtils(mapData);
+    const collisionUtils = new CollisionUtils(mapDataLocal);
     const [stompClient, setStompClient] = useState(null);
+
+    //console.warn('ubicación inicial',player.position.x, player.position.y);
 
     useEffect(() => {
         const socket = new SockJS('http://localhost:3001/battle-city-websocket');
@@ -23,7 +28,7 @@ export default function PlayerController({ playerId, initialPosition, mapData })
         client.connect({}, () => {
             client.subscribe('/topic/game-updates', (message) => {
                 const updatedState = JSON.parse(message.body);
-                console.log('+++++++updateplayers+++++++',updatedState);
+                //console.log('+++++++updateplayers+++++++',updatedState);
                 const updatedPlayer = updatedState.players ? updatedState.players[player.id] : undefined;
 
                 if (updatedPlayer) {
@@ -35,7 +40,7 @@ export default function PlayerController({ playerId, initialPosition, mapData })
                 }
             });
         }, (error) => {
-            console.error('Error de conexión:', error);
+            //console.error('Error de conexión:', error);
         });
 
         setStompClient(client);
@@ -47,6 +52,7 @@ export default function PlayerController({ playerId, initialPosition, mapData })
         };
     }, [player.id]);
 
+    
     const handlePlayerAction = (action) => {
         switch (action.type) {
             case 'MOVE':
@@ -61,62 +67,55 @@ export default function PlayerController({ playerId, initialPosition, mapData })
     };
 
     const movePlayer = (direction) => {
-        const newPosition = { ...player.position };
+        /*console.warn('is collisint1:',collisionUtils.checkCollision(player.position));
+        console.warn('position:',player.position);
+        console.warn('map X:',mapDataLocal[player.position.x][player.position.y]); */   
+        
+        let newX = player.position.x;
+        let newY = player.position.y;
+
         switch (direction) {
             case 'up':
-                newPosition.y -= 1;
+                newY -= 1;
                 break;
             case 'down':
-                newPosition.y += 1;
+                newY += 1;
                 break;
             case 'left':
-                newPosition.x -= 1;
+                newX -= 1;
                 break;
             case 'right':
-                newPosition.x += 1;
+                newX += 1;
                 break;
             default:
                 break;
         }
-
-        if (!collisionUtils.checkCollision(newPosition)) {
+        if (!collisionUtils.checkCollision({x: newX, y: newY})) // Siguiente posición no es muro
+        {
             setPlayer((prev) => ({
                 ...prev,
-                position: newPosition,
+                position: {x: newX, y: newY},
                 direction
             }));
+    
             if (stompClient && stompClient.connected) {
-                console.info('.....Conexión WebSocket establecida correctamente....');
                 stompClient.send('/app/player-action', {}, JSON.stringify({
                     playerId: player.id,
                     type: 'MOVE',
-                    position: newPosition,
+                    position: {x: newX, y: newY},
                     direction
                 }));
             }else {
                 console.error('----->Error: No hay conexión WebSocket activa<------');
             }
         }
-        /*if (stompClient && stompClient.connected) {
-            console.info('.....Conexión WebSocket establecida correctamente....');
-            stompClient.send('/app/player-action', {}, JSON.stringify({
-                playerId: player.id,
-                type: 'MOVE',
-                position: newPosition,
-                direction
-            }));
-        }else {
-            console.error('----->Error: No hay conexión WebSocket activa<------');
-        }*/
+        
     };
 
     const shootBullet = () => {
-        console.error('----->Error: disparo<------');
-        const bullet = {
-            id: Date.now(),
-            position: { ...player.position.x, ...player.position.y  },
-            direction: player.direction
-        };
+        //console.error('----->Error: disparo<------');
+        const bullet = {id: Date.now(), x: player.position.x, y: player.position.y, direction: player.direction };
+
         setBullets((prevBullets) => [...prevBullets, bullet]);
 
         if (stompClient && stompClient.connected) {
@@ -128,44 +127,51 @@ export default function PlayerController({ playerId, initialPosition, mapData })
         }
     };
 
-    usePlayerInput(handlePlayerAction);
-
     useEffect(() => {
         const interval = setInterval(() => {
             setBullets((prevBullets) =>
                 prevBullets
                     .map((bullet) => {
-                        const newPosition = { ...bullet.position };
-                        switch (bullet.direction) {
+                        let { x, y, direction } = bullet;
+                        // Mueve la bala según la dirección
+                        switch (direction) {
                             case 'up':
-                                newPosition.y -= 1;
+                                y -= 1;
                                 break;
                             case 'down':
-                                newPosition.y += 1;
+                                y += 1;
                                 break;
                             case 'left':
-                                newPosition.x -= 1;
+                                x -= 1;
                                 break;
                             case 'right':
-                                newPosition.x += 1;
+                                x += 1;
                                 break;
                             default:
                                 break;
                         }
-                        return newPosition;
+    
+                        // Verifica si la bala colisiona o sale del mapa
+                        if (collisionUtils.checkCollision({ x, y }) || x < 0 || x >= mapDataLocal[0].length || y < 0 || y >= mapDataLocal.length) {
+                            return null; // La bala se elimina si hay colisión o sale del mapa
+                        }
+    
+                        return { ...bullet, x, y }; // Actualiza la posición de la bala
                     })
-                    .filter((bullet) => bullet.position.x >= 0 && bullet.position.y >= 0)
+                    .filter(Boolean) // Elimina balas nulas (las que colisionaron o salieron del mapa)
             );
-        }, 100);
+        }, 100); // Intervalo de 100 ms para actualizar la posición de la bala
+    
+        return () => clearInterval(interval); // Limpia el intervalo cuando se desmonta el componente
+    }, [bullets]);
 
-        return () => clearInterval(interval);
-    }, []);
+    usePlayerInput(handlePlayerAction);
 
     return (
         <div>
             <Player id={player.id} position={player.position} direction={player.direction} />
             {bullets.map((bullet) => (
-                <Bullet key={bullet.id} {...bullet} />
+                <Bullet key={bullet.id} x={bullet.x} y={bullet.y} direction={bullet.direction} />
             ))}
         </div>
     );

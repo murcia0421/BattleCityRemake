@@ -4,10 +4,10 @@ const usePlayerInput = (onAction) => {
     const shootCooldownRef = useRef(false);  // Para controlar el enfriamiento de disparos
 
     useEffect(() => {
-        console.log('useEffect montado, listener de keydown registrado');  // Para verificar que el hook se ejecuta
+        //console.log('useEffect montado, listener de keydown registrado');  // Para verificar que el hook se ejecuta
 
         const handleKeyDown = (event) => {
-            console.log(`Tecla presionada: ${event.key}`);  // Verifica qué tecla se presionó
+            //console.log(`Tecla presionada: ${event.key}`);  // Verifica qué tecla se presionó
 
             let action = null;
             switch (event.key) {
@@ -37,7 +37,7 @@ const usePlayerInput = (onAction) => {
                     break;
             }
             if (action) {
-                console.log('Acción detectada:', action);  // Verifica qué acción se está enviando
+               // console.log('Acción detectada:', action);  // Verifica qué acción se está enviando
                 onAction(action);
             }
         };
