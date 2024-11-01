@@ -21,7 +21,7 @@ const Bullet = ({ x, y, direction }) => {
     }
   };
 
-  const style = { 
+  const style = {
     left: `${x * TILE_SIZE}px`,
     top: `${y * TILE_SIZE}px`,
     position: 'absolute',

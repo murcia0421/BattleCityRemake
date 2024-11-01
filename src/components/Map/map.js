@@ -4,11 +4,11 @@ import './Map.css'; // Importar el CSS
 import React, { useState } from 'react';
 import mapData from './MapData'; // Importar los datos del mapa
 import mapData2 from './MapData'; // Importar los datos del mapa
-import wallBrickImage from '../../assets/images/map/wall_brick.png'; // Asegúrate de que la ruta sea correcta
-import wallSteelImage from '../../assets/images/map/wall_steel.png'; // Asegúrate de que la ruta sea correcta
-import treeImage from '../../assets/images/map/trees.png'; // Asegúrate de que la ruta sea correcta
-import baseImage from '../../assets/images/map/base.png'; // Asegúrate de que la ruta sea correcta
-import PlayerController from '../../Controller/PlayerController'; 
+import wallBrickImage from '../../assets/images/map/wall_brick.png';
+import wallSteelImage from '../../assets/images/map/wall_steel.png';
+import treeImage from '../../assets/images/map/trees.png';
+import baseImage from '../../assets/images/map/base.png';
+import PlayerController from '../../Controller/PlayerController';
 import Player from '../Player/Player';
 import tankImage from '../../assets/images/tank.png';
 
@@ -53,7 +53,7 @@ const Map = () => {
                             mapData={mapData2}
                         />*/}
                   </>
-                    
+
                 ) : (
                     // Renderiza solo la imagen del tile si no es de tipo Base o si ya se alcanzó el máximo de jugadores
                     getTileImage(tile)
