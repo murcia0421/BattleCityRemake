@@ -10,7 +10,7 @@ const Player = ({ position, direction }) => {
   //console.warn('position',position);
   //console.warn('direction',direction);
 
-    const getRotation = (direction) => { 
+    const getRotation = (direction) => {
         switch (direction) {
           case 'up':
             return 180;
@@ -24,7 +24,7 @@ const Player = ({ position, direction }) => {
             return 0;
         }
       };
-      
+
     return (
         <div
             className="player"
@@ -40,7 +40,7 @@ const Player = ({ position, direction }) => {
           <img src={tankImage} alt="Tank" style={{ width: '100%', height: '100%' }} />
         </div>
     );
-    
+
 };
 
 export default Player;

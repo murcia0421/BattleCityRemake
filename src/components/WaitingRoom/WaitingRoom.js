@@ -8,7 +8,7 @@ const WaitingRoom = ({ onJoin, onStartGame }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   const stompClient = new Client({
-      brokerURL: 'http://localhost:8080/battle-city-websocket', 
+      brokerURL: 'http://localhost:8080/battle-city-websocket',
       onConnect: () => {
           console.log('Conectado a STOMP');
           setIsConnected(true);
