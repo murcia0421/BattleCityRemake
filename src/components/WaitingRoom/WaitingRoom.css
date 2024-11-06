@@ -48,3 +48,20 @@
   background-color: #a11a1a;
   transform: scale(1.05);
 }
+
+.waiting-room button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: #b22222;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+  font-family: 'Press Start 2P', cursive;
+}
+
+.waiting-room button:hover {
+  background-color: #a11a1a;
+  transform: scale(1.05);
+}

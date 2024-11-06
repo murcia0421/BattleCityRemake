@@ -8,24 +8,23 @@ const WaitingRoom = ({ onJoin, onStartGame }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   const stompClient = new Client({
-      brokerURL: 'http://localhost:8080/battle-city-websocket',
-      onConnect: () => {
-          console.log('Conectado a STOMP');
-          setIsConnected(true);
-          stompClient.subscribe('/topic/players', (message) => {
-              const updatedPlayers = JSON.parse(message.body);
-              setPlayers(updatedPlayers);
-          });
-      },
-      onDisconnect: () => {
-          console.log('Desconectado de STOMP');
-          setIsConnected(false);
-      },
-      debug: (str) => {
-          console.log(str);
-      },
+    brokerURL: 'ws://localhost:8080/battle-city-websocket',
+    onConnect: () => {
+      console.log('Conectado a STOMP'); 
+      setIsConnected(true); 
+      stompClient.subscribe('/topic/players', (message) => { 
+        const updatedPlayers = JSON.parse(message.body);
+        setPlayers(updatedPlayers);
+      });
+    },
+    onDisconnect: () => {
+      console.log('Desconectado de STOMP');
+      setIsConnected(false);
+    },
+    debug: (str) => {
+      console.log(str);
+    },
   });
-
   const joinRoom = () => {
     if (name) {
       if (isConnected) {
@@ -33,7 +32,7 @@ const WaitingRoom = ({ onJoin, onStartGame }) => {
           destination: '/app/join',
           body: JSON.stringify({ name }),
         });
-        onJoin(name);
+        onJoin(name); 
       } else {
         console.error("El cliente STOMP no está conectado.");
         alert("Por favor, espera a que la conexión se establezca.");
@@ -44,14 +43,8 @@ const WaitingRoom = ({ onJoin, onStartGame }) => {
   };
 
   useEffect(() => {
-    if (!stompClient.active) {
-      stompClient.activate();
-    }
-    return () => {
-      if (stompClient.active) {
-        stompClient.deactivate();
-      }
-    };
+    stompClient.activate();
+    return () => stompClient.deactivate();
   }, []);
 
   return (
