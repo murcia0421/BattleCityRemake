@@ -3,7 +3,7 @@ import './TankColorSelector.css';
 
 const TankColorSelector = ({ onColorSelect }) => {
   const colors = [
-    { name: 'Rojo', code: '#8B0000' },
+    { name: 'Morado', code: '#800080' },
     { name: 'Verde', code: '#006400' },
     { name: 'Azul', code: '#00008B' },
     { name: 'Amarillo', code: '#B8860B' }
