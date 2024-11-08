@@ -111,7 +111,6 @@ export default function PlayerController({ playerId, initialPosition, mapData })
         };
     }, [playerId, initialPosition]);
 
-    // El resto del código permanece igual...
     const handleGameState = (gameState) => {
         switch (gameState.type) {
             case 'PLAYER_UPDATE':
@@ -207,6 +206,8 @@ export default function PlayerController({ playerId, initialPosition, mapData })
             playerId
         };
 
+        console.log(bullets);
+
         setBullets(prev => [...prev, bullet]);
         sendMessage('/app/player-action', {
             type: 'BULLET_UPDATE',
@@ -267,5 +268,5 @@ export default function PlayerController({ playerId, initialPosition, mapData })
                 />
             ))}
         </div>
-    );
+    );  
 }
