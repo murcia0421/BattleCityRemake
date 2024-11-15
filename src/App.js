@@ -4,24 +4,25 @@ import GameBoard from './components/GameBoard/GameBoard';
 import StartScreen from './components/StartScreen/StartScreen';
 import TankColorSelector from './components/TankColorSelector/TankColorSelector';
 import WaitingRoom from './components/WaitingRoom/WaitingRoom';
+import RoomSelection from './components/RoomSelection/RoomSelection'; // Importamos el nuevo componente
 import { useMsal } from "@azure/msal-react";
-import { InteractionType } from "@azure/msal-browser";
 
 function App() {
     const { instance, accounts } = useMsal();
     const [currentScreen, setCurrentScreen] = useState('start');
     const [tankColor, setTankColor] = useState(null);
     const [playerName, setPlayerName] = useState('');
+    const [selectedRoom, setSelectedRoom] = useState(null); // Estado para la sala seleccionada
 
     const login = () => {
         instance.loginPopup({
           scopes: ["user.read"],
         }).catch((error) => console.error(error));
-      };
+    };
     
-      const logout = () => {
+    const logout = () => {
         instance.logoutPopup();
-      };
+    };
 
     const handleStart = () => {
         setCurrentScreen('colorSelection');
@@ -30,12 +31,18 @@ function App() {
     const handleColorSelect = (color) => {
         console.log(`Color seleccionado: ${color}`);
         setTankColor(color);
-        setCurrentScreen('waitingRoom');
+        setCurrentScreen('roomSelection'); // Cambiar a selección de sala
     };
 
     const handleJoin = (name) => {
         setPlayerName(name);
         setCurrentScreen('waitingRoom');
+    };
+
+    const handleRoomSelect = (roomId) => {
+        console.log(`Seleccionada la sala: ${roomId}`);
+        setSelectedRoom(roomId);
+        setCurrentScreen('waitingRoom'); // Después de seleccionar la sala, pasa a la sala de espera
     };
 
     const handleStartGame = () => {
@@ -48,10 +55,12 @@ function App() {
                 return <StartScreen onStart={handleStart} />;
             case 'colorSelection':
                 return <TankColorSelector onColorSelect={handleColorSelect} />;
+            case 'roomSelection':
+                return <RoomSelection onRoomSelect={handleRoomSelect} />;
             case 'waitingRoom':
-                return <WaitingRoom onJoin={handleJoin} playerName={playerName} onStartGame={handleStartGame} />;
+                return <WaitingRoom onJoin={handleJoin} playerName={playerName} selectedRoom={selectedRoom} onStartGame={handleStartGame} />;
             case 'gameBoard':
-                return <GameBoard tankColor={tankColor} playerName={playerName} />;
+                return <GameBoard tankColor={tankColor} playerName={playerName} selectedRoom={selectedRoom} />;
             default:
                 return <StartScreen onStart={handleStart} />;
         }
@@ -62,13 +71,12 @@ function App() {
             <h1>Battle City Remake</h1>
             {accounts.length > 0 ? (
                 <div>
-                {renderScreen()}
-                <button onClick={logout}>Logout</button>
+                    {renderScreen()}
+                    <button onClick={logout}>Logout</button>
                 </div>
             ) : ( 
                 <button onClick={login}>Login</button>
-            )
-            }
+            )}
         </div>
     );
 }

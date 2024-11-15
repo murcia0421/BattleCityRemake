@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import usePlayerInput from '../hooks/usePlayerInput';
 import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
@@ -7,7 +7,7 @@ import Player from '../components/Player/Player';
 import CollisionUtils from '../utils/collisionUtils';
 import mapDataLocal from '../components/Map/MapData';
 
-export default function PlayerController({ playerId, initialPosition, mapData }) {
+export default function PlayerController({ playerId, initialPosition, mapData, socketId }) {
     const [player, setPlayer] = useState({ 
         id: playerId, 
         position: initialPosition, 
@@ -19,7 +19,10 @@ export default function PlayerController({ playerId, initialPosition, mapData })
     });
     
     const [bullets, setBullets] = useState([]);
-    const collisionUtils = new CollisionUtils(mapDataLocal);
+    
+    // Memorizar la instancia de CollisionUtils para que no cambie en cada render
+    const collisionUtils = useMemo(() => new CollisionUtils(mapDataLocal), []); // Eliminamos la dependencia de mapDataLocal
+
     const [stompClient, setStompClient] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
 
@@ -43,50 +46,33 @@ export default function PlayerController({ playerId, initialPosition, mapData })
 
         const connectWebSocket = () => {
             try {
-                // Crear socket y cliente STOMP
-                socket = new SockJS('http://localhost:3001/battle-city-websocket');
-                client = Stomp.over(function() {
-                    return socket;
-                });
+                // Crear el socket usando el socketId
+                socket = new SockJS(`http://localhost:8080/battle-city-websocket/${socketId}`);
+                client = Stomp.over(() => socket);
 
-                // Configurar opciones de STOMP
-                client.reconnect_delay = 5000;
-                
-                // Desactivar logs
-                client.debug = () => {};
-
-                const onConnect = () => {
-                    console.log('WebSocket connected');
+                // Conecta el cliente STOMP con el ID de la sala
+                client.connect({}, () => {
+                    console.log(`WebSocket connected to room ${socketId}`);
                     setIsConnected(true);
                     setStompClient(client);
 
-                    // Suscribirse a actualizaciones
-                    client.subscribe('/topic/game-updates', (message) => {
-                        try {
-                            const gameState = JSON.parse(message.body);
-                            handleGameState(gameState);
-                        } catch (error) {
-                            console.error('Error processing message:', error);
-                        }
+                    // Suscripciones y lógica adicional
+                    client.subscribe(`/topic/${socketId}/game-updates`, (message) => {
+                        const gameState = JSON.parse(message.body);
+                        handleGameState(gameState);
                     });
 
-                    // Anunciar que el jugador se ha unido
-                    client.send('/app/player-join', {}, JSON.stringify({
+                    // Anunciar que el jugador se ha unido a la sala
+                    client.send(`/app/${socketId}/player-join`, {}, JSON.stringify({
                         id: playerId,
                         position: initialPosition,
                         direction: 'down'
                     }));
-                };
-
-                const onError = (error) => {
+                }, (error) => {
                     console.error('WebSocket connection error:', error);
                     setIsConnected(false);
                     setTimeout(connectWebSocket, 5000);
-                };
-
-                // Conectar con callbacks separados
-                client.connect({}, onConnect, onError);
-
+                });
             } catch (error) {
                 console.error('Error setting up WebSocket:', error);
                 setTimeout(connectWebSocket, 5000);
@@ -95,21 +81,17 @@ export default function PlayerController({ playerId, initialPosition, mapData })
 
         connectWebSocket();
 
-        // Cleanup
+        // Cleanup al desconectar
         return () => {
             if (client && client.connected) {
-                try {
-                    client.send('/app/player-disconnect', {}, JSON.stringify({ id: playerId }));
-                    client.disconnect();
-                } catch (error) {
-                    console.error('Error during cleanup:', error);
-                }
+                client.send(`/app/${socketId}/player-disconnect`, {}, JSON.stringify({ id: playerId }));
+                client.disconnect();
             }
             if (socket) {
                 socket.close();
             }
         };
-    }, [playerId, initialPosition]);
+    }, [playerId, initialPosition, socketId]);
 
     const handleGameState = (gameState) => {
         switch (gameState.type) {
@@ -244,7 +226,7 @@ export default function PlayerController({ playerId, initialPosition, mapData })
         }, 100);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [collisionUtils]); // Agregar collisionUtils como dependencia
 
     usePlayerInput(handlePlayerAction);
 
@@ -268,5 +250,5 @@ export default function PlayerController({ playerId, initialPosition, mapData })
                 />
             ))}
         </div>
-    );  
+    );
 }
