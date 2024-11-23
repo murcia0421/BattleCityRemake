@@ -1,74 +1,71 @@
-// Map.js
-import './Map.css'; // Importar el CSS
-
-import React, { useState } from 'react';
-import mapData from './MapData'; // Importar los datos del mapa
-import mapData2 from './MapData'; // Importar los datos del mapa
+import './Map.css';
+import React, { useState, useEffect } from 'react';
+import mapData from './MapData';
 import wallBrickImage from '../../assets/images/map/wall_brick.png';
 import wallSteelImage from '../../assets/images/map/wall_steel.png';
 import treeImage from '../../assets/images/map/trees.png';
 import baseImage from '../../assets/images/map/base.png';
 import PlayerController from '../../Controller/PlayerController';
-import Player from '../Player/Player';
-import tankImage from '../../assets/images/tank.png';
 
 const MAX_PLAYERS = 2;
 
+// Posiciones iniciales fijas para cada jugador
+const INITIAL_POSITIONS = {
+  player1: { x: 1, y: 1},  // Jugador 1 en la parte inferior izquierda
+  player2: { x: 2, y: 9 }   // Jugador 2 en la parte inferior derecha
+};
+
 const getTileImage = (tile) => {
   switch (tile) {
-    case 1:
-      return <img src={wallBrickImage} alt="Wall Brick" />;
-    case 2:
-      return <img src={wallSteelImage} alt="Wall Steel" />;
-    case 3:
-      return <img src={treeImage} alt="Tree" />;
-    case 4:
-      return <img src={baseImage} alt="Base" />;
-    case 0:
-    default:
-      return null;
+    case 1: return <img src={wallBrickImage} alt="Wall Brick" />;
+    case 2: return <img src={wallSteelImage} alt="Wall Steel" />;
+    case 3: return <img src={treeImage} alt="Tree" />;
+    case 4: return <img src={baseImage} alt="Base" />;
+    default: return null;
   }
 };
 
 const Map = () => {
+  // Estado para determinar qué playerId usar para este cliente
+  const [playerId, setPlayerId] = useState(() => {
+    const storedId = sessionStorage.getItem('playerId');
+    if (storedId) return storedId;
+    return null;
+  });
 
-  const [playersCreated, setPlayersCreated] = useState(1); // Lleva el conteo de los tanques creados
+  useEffect(() => {
+    if (!playerId) {
+      // Si no hay playerId almacenado, asignar uno nuevo
+      const newPlayerId = sessionStorage.getItem('playerId') || 
+                         `player${Math.floor(Math.random() * MAX_PLAYERS) + 1}`;
+      sessionStorage.setItem('playerId', newPlayerId);
+      setPlayerId(newPlayerId);
+    }
+  }, []);
 
   return (
     <div className="Map">
-      {/* Renderiza el mapa */}
+      {/* Renderizar el mapa base */}
       {mapData.map((row, rowIndex) => (
         <div key={rowIndex} className="map-row">
           {row.map((tile, colIndex) => (
             <div key={colIndex} className="map-tile">
-              {/*getTileImage(tile)*/}
-              {/*tile === 4 && playersCreated < MAX_PLAYERS ? (*/}
-              {tile === 4  ? (
-                // Renderiza el tanque si el tile es de tipo Base y el número de jugadores es menor que el máximo permitido
-                  <>
-                    {getTileImage(tile)}
-                        {/*<PlayerController
-                            playerId={`player${playersCreated }`}
-                            initialPosition={{ x: colIndex, y: rowIndex }}
-                            mapData={mapData2}
-                        />*/}
-                  </>
-
-                ) : (
-                    // Renderiza solo la imagen del tile si no es de tipo Base o si ya se alcanzó el máximo de jugadores
-                    getTileImage(tile)
-                )}
+              {getTileImage(tile)}
             </div>
           ))}
         </div>
       ))}
-      {/* Renderiza el controlador del jugador */}
-      {<PlayerController
-                            playerId={`player${playersCreated }`}
-                            initialPosition={{ x: 2, y: 9 }}
-                            mapData={mapData2}
-                        />}
+      
+      {/* Renderizar el PlayerController solo si tenemos un playerId */}
+      {playerId && (
+        <PlayerController
+          playerId={playerId}
+          initialPosition={INITIAL_POSITIONS[playerId]}
+          mapData={mapData}
+        />
+      )}
     </div>
   );
 };
+
 export default Map;

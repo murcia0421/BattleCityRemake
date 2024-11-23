@@ -23,6 +23,50 @@ export default function PlayerController({ playerId, initialPosition, mapData })
     const [stompClient, setStompClient] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
 
+    const handleGameState = useCallback((gameState) => {
+        switch (gameState.type) {
+            case 'PLAYER_UPDATE':
+                setAllPlayers(prev => ({
+                    ...prev,
+                    [gameState.playerId]: gameState.players[gameState.playerId]
+                }));
+                break;
+
+            case 'PLAYER_JOIN':
+                setAllPlayers(prev => ({
+                    ...prev,
+                    [gameState.playerId]: gameState.players[gameState.playerId]
+                }));
+                break;
+
+            case 'BULLET_UPDATE':
+                if (gameState.bullets) {
+                    setBullets(gameState.bullets);
+                }
+                break;
+
+            case 'PLAYER_DISCONNECT':
+                setAllPlayers(prev => {
+                    const newPlayers = { ...prev };
+                    delete newPlayers[gameState.playerId];
+                    return newPlayers;
+                });
+                break;
+
+            case 'STATE_UPDATE':
+                if (gameState.players) {
+                    setAllPlayers(gameState.players);
+                }
+                if (gameState.bullets) {
+                    setBullets(gameState.bullets);
+                }
+                break;
+
+            default:
+                console.warn('Unknown game state type:', gameState.type);
+        }
+    }, []);
+
     // Función para enviar mensajes de forma segura
     const sendMessage = useCallback((destination, body) => {
         if (stompClient && isConnected) {
@@ -43,16 +87,12 @@ export default function PlayerController({ playerId, initialPosition, mapData })
 
         const connectWebSocket = () => {
             try {
-                // Crear socket y cliente STOMP
                 socket = new SockJS('http://localhost:3001/battle-city-websocket');
                 client = Stomp.over(function() {
                     return socket;
                 });
 
-                // Configurar opciones de STOMP
                 client.reconnect_delay = 5000;
-                
-                // Desactivar logs
                 client.debug = () => {};
 
                 const onConnect = () => {
@@ -84,7 +124,6 @@ export default function PlayerController({ playerId, initialPosition, mapData })
                     setTimeout(connectWebSocket, 5000);
                 };
 
-                // Conectar con callbacks separados
                 client.connect({}, onConnect, onError);
 
             } catch (error) {
@@ -99,7 +138,9 @@ export default function PlayerController({ playerId, initialPosition, mapData })
         return () => {
             if (client && client.connected) {
                 try {
-                    client.send('/app/player-disconnect', {}, JSON.stringify({ id: playerId }));
+                    client.send('/app/player-disconnect', {}, JSON.stringify({ 
+                        id: playerId 
+                    }));
                     client.disconnect();
                 } catch (error) {
                     console.error('Error during cleanup:', error);
@@ -109,41 +150,7 @@ export default function PlayerController({ playerId, initialPosition, mapData })
                 socket.close();
             }
         };
-    }, [playerId, initialPosition]);
-
-    const handleGameState = (gameState) => {
-        switch (gameState.type) {
-            case 'PLAYER_UPDATE':
-            case 'PLAYER_JOIN':
-                setAllPlayers(prev => ({
-                    ...prev,
-                    [gameState.playerId]: gameState.players[gameState.playerId]
-                }));
-                break;
-            case 'BULLET_UPDATE':
-                if (gameState.bullets) {
-                    setBullets(gameState.bullets);
-                }
-                break;
-            case 'PLAYER_DISCONNECT':
-                setAllPlayers(prev => {
-                    const newPlayers = { ...prev };
-                    delete newPlayers[gameState.playerId];
-                    return newPlayers;
-                });
-                break;
-            case 'STATE_UPDATE':
-                if (gameState.players) {
-                    setAllPlayers(gameState.players);
-                }
-                if (gameState.bullets) {
-                    setBullets(gameState.bullets);
-                }
-                break;
-            default:
-                console.warn('Unknown game state type:', gameState.type);
-        }
-    };
+    }, [playerId, initialPosition, handleGameState]);
 
     const handlePlayerAction = (action) => {
         switch (action.type) {
@@ -206,8 +213,6 @@ export default function PlayerController({ playerId, initialPosition, mapData })
             playerId
         };
 
-        console.log(bullets);
-
         setBullets(prev => [...prev, bullet]);
         sendMessage('/app/player-action', {
             type: 'BULLET_UPDATE',
@@ -268,5 +273,5 @@ export default function PlayerController({ playerId, initialPosition, mapData })
                 />
             ))}
         </div>
-    );  
+    );
 }

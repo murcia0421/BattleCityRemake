@@ -9,7 +9,7 @@ const WaitingRoom = ({ onJoin, onStartGame }) => {
 
   // Crear una instancia del cliente STOMP
   const stompClient = new Client({
-    brokerURL: 'ws://localhost:8080/battle-city-websocket', // URL del servidor STOMP
+    brokerURL: 'ws://localhost:3001/battle-city-websocket', // URL del servidor STOMP
     onConnect: () => {
       console.log('Conectado a STOMP'); 
       setIsConnected(true); // Marca la conexión como activa
