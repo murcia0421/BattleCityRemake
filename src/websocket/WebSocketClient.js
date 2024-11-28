@@ -1,97 +1,58 @@
-// src/websocket/WebSocketClient.js
-class WebSocketClient {
-    static socket = null;
-    static isReconnecting = false;
-    static messageQueue = [];
-    static onMessageCallback = null;
-    static onErrorCallback = null;
-    static onCloseCallback = null;
-    static eventCallbacks = {}; // Almacenar callbacks de eventos
+import { Stomp } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 
-    static initialize(onMessage, onError = null, onClose = null, serverUrl = 'ws://localhost:3000', retryDelay = 3000) {
-        if (this.isReconnecting) return;
-        this.isReconnecting = true;
-        this.onMessageCallback = onMessage;
-        this.onErrorCallback = onError;
-        this.onCloseCallback = onClose;
+const SOCKET_URL = "http://localhost:8080/ws";
+let stompClient = null;
+let currentSubscriptions = new Map();
 
-        this.socket = new WebSocket(serverUrl);
-        this.socket.onopen = () => this.handleOpen(retryDelay);
-        this.socket.onmessage = this.handleMessage.bind(this);
-        this.socket.onerror = this.handleError.bind(this);
-        this.socket.onclose = () => this.handleClose(retryDelay);
+export const connectToRoom = (roomName, onMessageReceived) => {
+    if (stompClient && stompClient.connected) {
+        subscribeToRoom(roomName, onMessageReceived);
+        return;
     }
 
-    static handleOpen(retryDelay) {
-        console.log('WebSocket connected');
-        this.isReconnecting = false;
-        this.flushQueue();
-    }
+    const socket = new SockJS(SOCKET_URL);
+    stompClient = Stomp.over(socket);
 
-    static handleMessage(event) {
-        if (this.onMessageCallback) {
-            const message = JSON.parse(event.data);
-            this.onMessageCallback(message);
+    stompClient.debug = () => {}; // Disable STOMP debug logs
+
+    stompClient.connect(
+        {},
+        () => {
+            console.log("Connected to WebSocket");
+            subscribeToRoom(roomName, onMessageReceived);
+        },
+        (error) => {
+            console.error("WebSocket connection error:", error);
+            setTimeout(() => {
+                if (!stompClient.connected) {
+                    connectToRoom(roomName, onMessageReceived);
+                }
+            }, 5000);
         }
-        // Notificar a otros suscriptores
-        this.trigger('message', JSON.parse(event.data));
+    );
+};
+
+const subscribeToRoom = (roomName, onMessageReceived) => {
+    if (!currentSubscriptions.has(roomName)) {
+        const subscription = stompClient.subscribe("/topic/room-status", (message) => {
+            if (message.body) {
+                const parsedMessage = JSON.parse(message.body);
+                console.log("WebSocket received message:", parsedMessage);
+                onMessageReceived(parsedMessage);
+            }
+        });
+
+        currentSubscriptions.set(roomName, subscription);
+        stompClient.send("/app/enter-room", {}, JSON.stringify({ roomName }));
     }
+};
 
-    static handleError(error) {
-        console.error('WebSocket error:', error);
-        if (this.onErrorCallback) {
-            this.onErrorCallback(error);
-        }
-        // Notificar a otros suscriptores
-        this.trigger('error', error);
+export const leaveRoom = (roomName) => {
+    if (currentSubscriptions.has(roomName)) {
+        const subscription = currentSubscriptions.get(roomName);
+        subscription.unsubscribe();
+        currentSubscriptions.delete(roomName);
+        stompClient.send("/app/leave-room", {}, JSON.stringify({ roomName }));
     }
-
-    static handleClose(retryDelay) {
-        console.log('WebSocket disconnected. Reconnecting in', retryDelay, 'ms...');
-        if (this.onCloseCallback) {
-            this.onCloseCallback();
-        }
-        setTimeout(() => {
-            this.isReconnecting = false;
-            this.initialize(this.onMessageCallback, this.onErrorCallback, this.onCloseCallback, undefined, retryDelay * 2);
-        }, retryDelay);
-    }
-
-    static sendAction(action) {
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify(action));
-        } else {
-            this.messageQueue.push(action);
-        }
-    }
-
-    static flushQueue() {
-        while (this.messageQueue.length > 0 && this.socket.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify(this.messageQueue.shift()));
-        }
-    }
-
-    // Método para suscribirse a eventos
-    static on(event, callback) {
-        if (!this.eventCallbacks[event]) {
-            this.eventCallbacks[event] = [];
-        }
-        this.eventCallbacks[event].push(callback);
-    }
-
-    // Método para cancelar la suscripción a eventos
-    static off(event, handler) {
-        if (!this.eventCallbacks[event]) return;
-
-        this.eventCallbacks[event] = this.eventCallbacks[event].filter(h => h !== handler);
-    }
-
-    // Método para disparar eventos
-    static trigger(event, data) {
-        if (this.eventCallbacks[event]) {
-            this.eventCallbacks[event].forEach(callback => callback(data));
-        }
-    }
-}
-
-export default WebSocketClient;
+};

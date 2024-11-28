@@ -1,70 +1,88 @@
+import { Stomp } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 
-const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
-const CollisionUtils = require('../utils/collisionUtils'); // Importar la clase de colisiones
-//const mapData = require('./data/mapData'); // Importar datos del mapa
-const mapData = require('../components/Map/MapData'); // Importar datos del mapa
+const SOCKET_URL = "http://localhost:8080/ws";
+let stompClient = null;
+let currentSubscriptions = new Map(); // Para mantener track de las suscripciones
 
-const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
+export const connectToRoom = (roomName, onMessageReceived) => {
+    // Si ya existe una conexión activa, solo nos suscribimos al nuevo room
+    if (stompClient && stompClient.connected) {
+        subscribeToRoom(roomName, onMessageReceived);
+        return;
+    }
 
-let players = {}; // Almacena la información de los jugadores
-const collisionUtils = new CollisionUtils(mapData); // Instanciar CollisionUtils con los datos del mapa
+    // Si no hay conexión, creamos una nueva
+    const socket = new SockJS(SOCKET_URL);
+    stompClient = Stomp.over(socket);
+    
+    // Deshabilitar logs de STOMP
+    stompClient.debug = () => {};
 
-io.on('connection', (socket) => {
-    console.log('Nuevo jugador conectado:', socket.id);
-
-    // Inicializa el jugador
-    players[socket.id] = { id: socket.id, position: { x: 0, y: 0 } };
-
-    // Enviar información inicial del juego al nuevo jugador
-    socket.emit('initGame', { players, mapData });
-
-    // Manejar el movimiento del jugador
-    socket.on('playerMove', (data) => {
-        if (players[socket.id]) {
-            const newPosition = calculateNewPosition(players[socket.id].position, data.direction);
-
-            // Verificar colisiones antes de actualizar la posición
-            if (!collisionUtils.checkCollision(newPosition)) {
-                players[socket.id].position = newPosition;
-                socket.broadcast.emit('playerMoved', players[socket.id]);
-            }
+    stompClient.connect(
+        {},
+        () => {
+            console.log("Connected to WebSocket");
+            subscribeToRoom(roomName, onMessageReceived);
+        },
+        (error) => {
+            console.error("WebSocket connection error:", error);
+            // Intentar reconectar en caso de error
+            setTimeout(() => {
+                if (!stompClient?.connected) {
+                    connectToRoom(roomName, onMessageReceived);
+                }
+            }, 5000);
         }
-    });
+    );
+};
 
-    // Manejar el disparo
-    socket.on('shoot', (bulletData) => {
-        // Lógica para manejar el disparo
-        const bullet = { id: Date.now(), position: bulletData.position, direction: bulletData.direction };
-        socket.broadcast.emit('bulletFired', { playerId: socket.id, bullet });
-    });
+const subscribeToRoom = (roomName, onMessageReceived) => {
+    // Verificar si ya existe una suscripción para esta sala
+    if (!currentSubscriptions.has(roomName)) {
+        const subscription = stompClient.subscribe("/topic/room-status", (message) => {
+            if (message.body) {
+                const parsedMessage = JSON.parse(message.body);
+                console.log("WebSocket received message:", parsedMessage);
+                onMessageReceived(parsedMessage);
+            }
+        });
 
-    // Manejar desconexión del jugador
-    socket.on('disconnect', () => {
-        console.log('Jugador desconectado:', socket.id);
-        delete players[socket.id];
-    });
-});
-
-// Función para calcular la nueva posición
-const calculateNewPosition = (currentPosition, direction) => {
-    switch (direction) {
-        case 'up':
-            return { x: currentPosition.x, y: currentPosition.y - 1 };
-        case 'down':
-            return { x: currentPosition.x, y: currentPosition.y + 1 };
-        case 'left':
-            return { x: currentPosition.x - 1, y: currentPosition.y };
-        case 'right':
-            return { x: currentPosition.x + 1, y: currentPosition.y };
-        default:
-            return currentPosition;
+        // Guardar la suscripción
+        currentSubscriptions.set(roomName, subscription);
+        
+        // Enviar solicitud para unirse a la sala
+        stompClient.send("/app/join", {}, roomName);
     }
 };
 
-server.listen(8080, () => {
-    console.log('Servidor escuchando en http://localhost:8080');
-});
+export const leaveRoom = (roomName) => {
+    if (stompClient?.connected) {
+        try {
+            // Enviamos mensaje de leave
+            stompClient.send("/app/leave", {}, roomName);
+            console.log(`Left room: ${roomName}`);
+
+            // Cancelar la suscripción específica de esta sala
+            const subscription = currentSubscriptions.get(roomName);
+            if (subscription) {
+                subscription.unsubscribe();
+                currentSubscriptions.delete(roomName);
+            }
+
+            // Solo desconectamos si no hay más suscripciones activas
+            if (currentSubscriptions.size === 0) {
+                stompClient.disconnect(() => {
+                    console.log("Disconnected from WebSocket");
+                    stompClient = null;
+                });
+            }
+        } catch (error) {
+            console.error("Error while leaving room:", error);
+        }
+    }
+};
+
+export const isConnected = () => {
+    return stompClient && stompClient.connected;
+};
