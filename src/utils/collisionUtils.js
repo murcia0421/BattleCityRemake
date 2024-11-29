@@ -3,6 +3,18 @@ class CollisionUtils {
     constructor(mapData) {
         this.mapData = mapData;
     }
+    handleBulletWallCollision(bullet, mapData) {
+        const tileX = Math.floor(bullet.x);
+        const tileY = Math.floor(bullet.y);
+    
+        // Verifica si la bala ha impactado una pared destructible (ladrillo)
+        if (this.mapData[tileY] && this.mapData[tileY][tileX] === 1) {
+          // Destruye la pared (cambia el tile a 0 - espacio vacío)
+          this.mapData[tileY][tileX] = 0;
+          return true; // Indica que hubo una colisión
+        }dds
+        return false;
+      }
 
     checkCollision(position) {
         const { x, y } = position;

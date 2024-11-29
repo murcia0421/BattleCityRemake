@@ -1,11 +1,11 @@
-import './Map.css';
-import React, { useState, useEffect } from 'react';
-import mapData from './MapData';
+import React, { useEffect, useState } from 'react';
+import baseImage from '../../assets/images/map/base.png';
+import treeImage from '../../assets/images/map/trees.png';
 import wallBrickImage from '../../assets/images/map/wall_brick.png';
 import wallSteelImage from '../../assets/images/map/wall_steel.png';
-import treeImage from '../../assets/images/map/trees.png';
-import baseImage from '../../assets/images/map/base.png';
 import PlayerController from '../../Controller/PlayerController';
+import './Map.css';
+import mapData from './MapData';
 
 const MAX_PLAYERS = 2;
 

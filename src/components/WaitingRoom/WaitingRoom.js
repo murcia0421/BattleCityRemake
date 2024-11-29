@@ -3,86 +3,103 @@ import React, { useEffect, useState } from 'react';
 import './WaitingRoom.css';
 
 const WaitingRoom = ({ onJoin, onStartGame }) => {
-  const [name, setName] = useState(''); // Nombre del jugador
-  const [players, setPlayers] = useState([]); // Lista de jugadores en la sala
-  const [isConnected, setIsConnected] = useState(false); // Estado de la conexión STOMP
+    const [name, setName] = useState('');
+    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [rooms, setRooms] = useState([
+        { id: 'room1', name: 'Room 1', currentPlayers: 0, maxPlayers: 4 },
+        { id: 'room2', name: 'Room 2', currentPlayers: 0, maxPlayers: 4 },
+        { id: 'room3', name: 'Room 3', currentPlayers: 0, maxPlayers: 4 },
+        { id: 'room4', name: 'Room 4', currentPlayers: 0, maxPlayers: 4 }
+    ]);
+    const [isConnected, setIsConnected] = useState(false);
 
-  // Crear una instancia del cliente STOMP
-  const stompClient = new Client({
-    brokerURL: 'ws://localhost:3001/battle-city-websocket', // URL del servidor STOMP
-    onConnect: () => {
-      console.log('Conectado a STOMP'); 
-      setIsConnected(true); // Marca la conexión como activa
-      
-      // Suscribirse al tópico donde se reciben los jugadores conectados
-      stompClient.subscribe('/topic/players', (message) => { 
-        const updatedPlayers = JSON.parse(message.body); // Parsear los jugadores recibidos
-        setPlayers(updatedPlayers); // Actualizar la lista de jugadores
-      });
-    },
-    onDisconnect: () => {
-      console.log('Desconectado de STOMP');
-      setIsConnected(false); // Marcar la desconexión
-    },
-    debug: (str) => {
-      console.log(str); // Imprimir mensajes de debug
-    },
-  });
+    const stompClient = new Client({
+        brokerURL: 'ws://localhost:3001/battle-city-websocket',
+        onConnect: () => {
+            console.log('Connected to STOMP');
+            setIsConnected(true);
 
-  // Función para unirse a la sala de espera
-  const joinRoom = () => {
-    if (name) {
-      if (isConnected) {
-        // Publicar un mensaje en el servidor STOMP para unirse
-        stompClient.publish({
-          destination: '/app/join', // El endpoint en el servidor
-          body: JSON.stringify({ name }), // Enviar el nombre del jugador
-        });
-        onJoin(name); // Llamar la función onJoin para actualizar el estado del jugador en el frontend
-      } else {
-        console.error("El cliente STOMP no está conectado.");
-        alert("Por favor, espera a que la conexión se establezca.");
-      }
-    } else {
-      alert("Por favor, ingresa un nombre.");
-    }
-  };
+            // Suscribirse a actualizaciones
+            stompClient.subscribe('/topic/rooms', (message) => {
+                const updatedRooms = JSON.parse(message.body);
+                setRooms(updatedRooms);
+            });
+        },
+        onDisconnect: () => {
+            console.log('Disconnected from STOMP');
+            setIsConnected(false);
+        },
+        debug: (str) => {
+            console.log(str);
+        },
+    });
 
-  // Usar useEffect para activar y desactivar la conexión STOMP
-  useEffect(() => {
-    stompClient.activate(); // Activar la conexión STOMP cuando el componente se monta
-    return () => stompClient.deactivate(); // Desactivar la conexión cuando el componente se desmonta
-  }, []);
+    const joinRoom = () => {
+        if (name && selectedRoom) {
+            if (isConnected) {
+                // Publish message to join a specific room
+                stompClient.publish({
+                    destination: '/app/join-room',
+                    body: JSON.stringify({
+                        name,
+                        roomId: selectedRoom
+                    }),
+                });
+                onJoin(name);
+            } else {
+                alert("Please wait for the connection to be established.");
+            }
+        } else {
+            alert("Please enter a name and select a room.");
+        }
+    };
 
-  return (
-    <div className="waiting-room">
-      <div className="waiting-room-box">
-        <h2>Bienvenido a la sala de espera</h2>
-        
-        {/* Input para ingresar el nombre */}
-        <input
-          type="text"
-          placeholder="Ingresa tu nombre"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        
-        {/* Botón para unirse a la sala */}
-        <button onClick={joinRoom}>Unirse a la sala de espera</button>
-        
-        <h3>Jugadores en la sala:</h3>
-        <ul>
-          {/* Mostrar la lista de jugadores conectados */}
-          {players.map((player, index) => (
-            <li key={index}>{player}</li>
-          ))}
-        </ul>
-        
-        {/* Botón para iniciar el juego, siempre visible */}
-        <button onClick={onStartGame}>Iniciar Juego</button>
-      </div>
-    </div>
-  );
+    useEffect(() => {
+        stompClient.activate();
+        return () => stompClient.deactivate();
+    }, []);
+
+    return (
+        <div className="waiting-room">
+            <div className="waiting-room-box">
+                <h2>Welcome to the Waiting Room</h2>
+                
+                <input
+                    type="text"
+                    placeholder="Enter your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                />
+                
+                <div className="room-selection">
+                    <h3>Select a Room:</h3>
+                    {rooms.map((room) => (
+                        <div
+                            key={room.id}
+                            className={`room-option ${selectedRoom === room.id ? 'selected' : ''}`}
+                            onClick={() => setSelectedRoom(room.id)}
+                        >
+                            {room.name} - Players: {room.currentPlayers}/{room.maxPlayers}
+                        </div>
+                    ))}
+                </div>
+                
+                <button
+                    onClick={joinRoom}
+                    disabled={!name || !selectedRoom}
+                >
+                    Join Room
+                </button>
+                
+                <button
+                    onClick={onStartGame}
+                    //disabled={!selectedRoom}
+                >
+                    Start Game
+                </button>
+            </div>
+        </div>
+    );
 };
 
 export default WaitingRoom;

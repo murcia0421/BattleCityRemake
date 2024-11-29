@@ -1,12 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
-import Map from '../Map/map';
-import Bullet from '../Bullets/Bullet';
-import usePlayerInput from '../../hooks/usePlayerInput';
+import React, { useState } from 'react';
 import CollisionUtils from '../../utils/collisionUtils';
+import Bullet from '../Bullets/Bullet';
+import Map from '../Map/map';
 import mapData from '../Map/MapData';
-import WebSocketClient from '../../websocket/WebSocketClient';
-import PlayerController from '../../Controller/PlayerController';
 
 const GameBoard = ({ tankColor }) => {
   const [players, setPlayers] = useState([]); // Lista de todos los jugadores en el juego
