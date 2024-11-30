@@ -5,7 +5,6 @@ import StartScreen from './components/StartScreen/StartScreen';
 import TankColorSelector from './components/TankColorSelector/TankColorSelector';
 import WaitingRoom from './components/WaitingRoom/WaitingRoom';
 import { useMsal } from "@azure/msal-react";
-import { InteractionType } from "@azure/msal-browser";
 
 function App() {
     const { instance, accounts } = useMsal();
@@ -17,11 +16,11 @@ function App() {
         instance.loginPopup({
           scopes: ["user.read"],
         }).catch((error) => console.error(error));
-      };
-    
-      const logout = () => {
+    };
+  
+    const logout = () => {
         instance.logoutPopup();
-      };
+    };
 
     const handleStart = () => {
         setCurrentScreen('colorSelection');
@@ -62,13 +61,12 @@ function App() {
             <h1>Battle City Remake</h1>
             {accounts.length > 0 ? (
                 <div>
-                {renderScreen()}
-                <button onClick={logout}>Logout</button>
+                    {renderScreen()}
+                    <button onClick={logout}>Logout</button>
                 </div>
             ) : ( 
                 <button onClick={login}>Login</button>
-            )
-            }
+            )}
         </div>
     );
 }

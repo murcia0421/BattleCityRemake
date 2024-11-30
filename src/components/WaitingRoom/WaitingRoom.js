@@ -1,88 +1,175 @@
+import React, { useState, useEffect } from 'react';
 import { Client } from '@stomp/stompjs';
-import React, { useEffect, useState } from 'react';
-import './WaitingRoom.css';
+import SockJS from 'sockjs-client';
 
-const WaitingRoom = ({ onJoin, onStartGame }) => {
-  const [name, setName] = useState(''); // Nombre del jugador
-  const [players, setPlayers] = useState([]); // Lista de jugadores en la sala
-  const [isConnected, setIsConnected] = useState(false); // Estado de la conexión STOMP
+const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
+    const [stompClient, setStompClient] = useState(null);
+    const [players, setPlayers] = useState([]);
+    const [connectionStatus, setConnectionStatus] = useState('disconnected');
+    const [hasJoined, setHasJoined] = useState(false);
+    const [myPlayerId, setMyPlayerId] = useState(null);
 
-  // Crear una instancia del cliente STOMP
-  const stompClient = new Client({
-    brokerURL: 'ws://localhost:3001/battle-city-websocket', // URL del servidor STOMP
-    onConnect: () => {
-      console.log('Conectado a STOMP'); 
-      setIsConnected(true); // Marca la conexión como activa
-      
-      // Suscribirse al tópico donde se reciben los jugadores conectados
-      stompClient.subscribe('/topic/players', (message) => { 
-        const updatedPlayers = JSON.parse(message.body); // Parsear los jugadores recibidos
-        setPlayers(updatedPlayers); // Actualizar la lista de jugadores
-      });
-    },
-    onDisconnect: () => {
-      console.log('Desconectado de STOMP');
-      setIsConnected(false); // Marcar la desconexión
-    },
-    debug: (str) => {
-      console.log(str); // Imprimir mensajes de debug
-    },
-  });
+    useEffect(() => {
+        const connectToWebSocket = () => {
+            try {
+                const socket = new SockJS('http://localhost:8080/ws');
+                const client = new Client({
+                    webSocketFactory: () => socket,
+                    reconnectDelay: 5000,
+                    debug: (str) => {
+                        console.log('STOMP Debug:', str);
+                    },
+                    onConnect: () => {
+                        console.log('Conectado al servidor');
+                        setConnectionStatus('connected');
+                        
+                        client.subscribe('/topic/players', (message) => {
+                            console.log('Mensaje recibido del servidor:', message.body);
+                            try {
+                                const data = JSON.parse(message.body);
+                                
+                                if (Array.isArray(data)) {
+                                    setPlayers(data);
+                                    // Verificar si este cliente ya está en la lista
+                                    const isAlreadyJoined = data.some(player => player.id === myPlayerId);
+                                    setHasJoined(isAlreadyJoined);
+                                    return;
+                                }
 
-  // Función para unirse a la sala de espera
-  const joinRoom = () => {
-    if (name) {
-      if (isConnected) {
-        // Publicar un mensaje en el servidor STOMP para unirse
-        stompClient.publish({
-          destination: '/app/join', // El endpoint en el servidor
-          body: JSON.stringify({ name }), // Enviar el nombre del jugador
-        });
-        onJoin(name); // Llamar la función onJoin para actualizar el estado del jugador en el frontend
-      } else {
-        console.error("El cliente STOMP no está conectado.");
-        alert("Por favor, espera a que la conexión se establezca.");
-      }
-    } else {
-      alert("Por favor, ingresa un nombre.");
-    }
-  };
+                                setPlayers(current => {
+                                    // Evitar duplicados
+                                    const existingPlayer = current.find(p => p.id === data.id);
+                                    if (existingPlayer) {
+                                        return current.map(p => p.id === data.id ? data : p);
+                                    }
+                                    return [...current, data];
+                                });
 
-  // Usar useEffect para activar y desactivar la conexión STOMP
-  useEffect(() => {
-    stompClient.activate(); // Activar la conexión STOMP cuando el componente se monta
-    return () => stompClient.deactivate(); // Desactivar la conexión cuando el componente se desmonta
-  }, []);
+                                // Si este es nuestro nuevo jugador
+                                if (!hasJoined && data.id) {
+                                    setMyPlayerId(data.id);
+                                    setHasJoined(true);
+                                }
+                            } catch (e) {
+                                console.error('Error al procesar mensaje:', e);
+                            }
+                        });
 
-  return (
-    <div className="waiting-room">
-      <div className="waiting-room-box">
-        <h2>Bienvenido a la sala de espera</h2>
+                        client.publish({
+                            destination: '/app/request-players'
+                        });
+                    },
+                    onStompError: (frame) => {
+                        console.error('Error en STOMP:', frame.headers['message']);
+                        setConnectionStatus('error');
+                    },
+                    onDisconnect: () => {
+                        console.log('Desconectado del servidor');
+                        setConnectionStatus('disconnected');
+                        setHasJoined(false);
+                        setMyPlayerId(null);
+                    }
+                });
+
+                client.activate();
+                setStompClient(client);
+
+                return client;
+            } catch (error) {
+                console.error('Error al conectar:', error);
+                setConnectionStatus('error');
+            }
+        };
+
+        const client = connectToWebSocket();
+
+        return () => {
+            if (client) {
+                client.deactivate();
+            }
+        };
+    }, [myPlayerId, hasJoined]);
+
+    const addPlayer = () => {
+        if (!stompClient || !stompClient.connected) {
+            console.error('No hay conexión con el servidor');
+            return;
+        }
+
+        if (hasJoined || players.length >= 4) {
+            console.log('No puedes unirte: Ya estás unido o la sala está llena');
+            return;
+        }
+
+        console.log('Intentando añadir jugador...'); 
         
-        {/* Input para ingresar el nombre */}
-        <input
-          type="text"
-          placeholder="Ingresa tu nombre"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        
-        {/* Botón para unirse a la sala */}
-        <button onClick={joinRoom}>Unirse a la sala de espera</button>
-        
-        <h3>Jugadores en la sala:</h3>
-        <ul>
-          {/* Mostrar la lista de jugadores conectados */}
-          {players.map((player, index) => (
-            <li key={index}>{player}</li>
-          ))}
-        </ul>
-        
-        {/* Botón para iniciar el juego, siempre visible */}
-        <button onClick={onStartGame}>Iniciar Juego</button>
-      </div>
-    </div>
-  );
+        const playerData = {
+            id: null,
+            position: null,
+            direction: "down"
+        };
+
+        try {
+            stompClient.publish({
+                destination: '/app/players',
+                body: JSON.stringify(playerData)
+            });
+            console.log('Mensaje enviado al servidor');
+        } catch (error) {
+            console.error('Error al enviar mensaje:', error);
+        }
+    };
+
+    const canStartGame = players.length >= 2
+    console.log(canStartGame);
+    console.log(players.length);
+
+
+    return (
+        <div>
+            <h2>Battle City Remake</h2>
+            <p>Sala de Espera</p>
+            <p>Estado: {connectionStatus}</p>
+            <p>Jugador: {playerName || 'Sin nombre'}</p>
+            <p>Total de jugadores: {players.length}/4</p>
+            <div>
+                <h3>Jugadores en sala:</h3>
+                {players.length === 0 ? (
+                    <p>No hay jugadores en la sala</p>
+                ) : (
+                    <ul>
+                        {players.map((player, index) => (
+                            <li key={player.id || index}>
+                                {player.id} {player.id === myPlayerId ? '(Tú)' : ''}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+            <button 
+                onClick={addPlayer} 
+                disabled={hasJoined || players.length >= 4}
+                style={{ backgroundColor: hasJoined ? '#cccccc' : '#4CAF50' }}
+            >
+                {hasJoined ? 'Ya unido' : 'Unirse'}
+            </button>
+            <button 
+                onClick={onStartGame} 
+                disabled={!canStartGame}
+                style={{ 
+                    backgroundColor: canStartGame ? '#4CAF50' : '#cccccc',
+                    marginLeft: '10px'
+                }}
+            >
+                Comenzar Juego ({players.length}/2 necesarios)
+            </button>
+            <p style={{ fontSize: '0.8em', color: '#666' }}>
+                {!hasJoined ? 'Debes unirte para poder comenzar' : 
+                 players.length < 2 ? 'Se necesitan al menos 2 jugadores para comenzar' : 
+                 canStartGame ? 'Puedes comenzar el juego' : ''}
+            </p>
+        </div>
+    );
 };
 
 export default WaitingRoom;
