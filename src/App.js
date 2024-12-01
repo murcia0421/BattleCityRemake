@@ -11,6 +11,7 @@ function App() {
     const [currentScreen, setCurrentScreen] = useState('start');
     const [tankColor, setTankColor] = useState(null);
     const [playerName, setPlayerName] = useState('');
+    const [gamePlayers, setGamePlayers] = useState([]); // Nuevo estado para los jugadores
 
     const login = () => {
         instance.loginPopup({
@@ -37,7 +38,9 @@ function App() {
         setCurrentScreen('waitingRoom');
     };
 
-    const handleStartGame = () => {
+    const handleStartGame = (players) => {
+        console.log('Iniciando juego con jugadores:', players);
+        setGamePlayers(players); // Guardamos los jugadores
         setCurrentScreen('gameBoard');
     };
 
@@ -59,7 +62,7 @@ function App() {
                 return (
                     <GameBoard
                         tankColor={tankColor}
-                        playerName={playerName}
+                        playersData={gamePlayers} // Pasamos los jugadores guardados
                     />
                 );
             default:

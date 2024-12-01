@@ -1,328 +1,141 @@
-import { Stomp } from '@stomp/stompjs';
+import { Client } from '@stomp/stompjs';
 import React, { useCallback, useEffect, useState } from 'react';
 import SockJS from 'sockjs-client';
-import Bullet from '../components/Bullets/Bullet';
-import mapDataLocal from '../components/Map/MapData';
-import Player from '../components/Player/Player';
-import usePlayerInput from '../hooks/usePlayerInput';
-import CollisionUtils from '../utils/collisionUtils';
+import Player from '../components/Player/Player'; // Asegúrate de tener este componente
+import usePlayerInput from '../hooks/usePlayerInput'; // Asegúrate de que funcione correctamente
+import CollisionUtils from '../utils/collisionUtils'; // Para verificar colisiones
 
-const TILE_SIZE = 32;
-const MOVEMENT_SPEED = 1;
-const BULLET_SPEED = 0.15;
+const MOVEMENT_SPEED = 0.1;
 
 export default function PlayerController({ playerId, playerName, initialPosition, mapData }) {
-    const [player, setPlayer] = useState({ 
-        id: playerId, 
-        name: playerName,
-        position: initialPosition,
-        direction: 'down' 
+    const [gameState, setGameState] = useState({
+        players: {
+            [playerId]: { id: playerId, name: playerName, position: initialPosition, direction: 'down' }
+        },
     });
-    
-    const [allPlayers, setAllPlayers] = useState({
-        [playerId]: { id: playerId, name: playerName, position: initialPosition, direction: 'down' }
-    });
-    
-    const [bullets, setBullets] = useState([]);
-    const collisionUtils = new CollisionUtils(mapDataLocal);
     const [stompClient, setStompClient] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
+    const collisionUtils = new CollisionUtils(mapData);
 
-    const handleGameState = useCallback((gameState) => {
-        switch (gameState.type) {
-            case 'PLAYER_UPDATE':
-                setAllPlayers(prev => {
-                    const updatedPlayers = {
+    // Manejar actualizaciones de mensajes del servidor
+    const handleGameUpdate = useCallback((message) => {
+        if (!message || !message.body) return;
+
+        try {
+            const update = JSON.parse(message.body);
+            switch (update.type) {
+                case 'PLAYER_MOVE':
+                    setGameState(prev => ({
                         ...prev,
-                        [gameState.playerId]: {
-                            ...prev[gameState.playerId],
-                            position: gameState.position,
-                            direction: gameState.direction
+                        players: {
+                            ...prev.players,
+                            [update.playerId]: {
+                                ...prev.players[update.playerId],
+                                position: update.position,
+                                direction: update.direction,
+                            }
                         }
-                    };
-                    return updatedPlayers;
-                });
-
-                if (gameState.playerId === playerId) {
-                    setPlayer(prev => ({
+                    }));
+                    break;
+                case 'PLAYER_JOIN':
+                    setGameState(prev => ({
                         ...prev,
-                        position: gameState.position,
-                        direction: gameState.direction
-                    }));
-                }
-                break;
-
-            case 'PLAYER_JOIN':
-                setAllPlayers(prev => ({
-                    ...prev,
-                    [gameState.playerId]: {
-                        ...gameState.players[gameState.playerId],
-                        name: gameState.players[gameState.playerId].name || 'Player'
-                    }
-                }));
-                break;
-
-            case 'BULLET_UPDATE':
-                if (gameState.bullets) {
-                    setBullets(gameState.bullets);
-                }
-                break;
-
-            case 'PLAYER_DISCONNECT':
-                setAllPlayers(prev => {
-                    const newPlayers = { ...prev };
-                    delete newPlayers[gameState.playerId];
-                    return newPlayers;
-                });
-                break;
-
-            case 'STATE_UPDATE':
-                if (gameState.players) {
-                    setAllPlayers(gameState.players);
-                }
-                if (gameState.bullets) {
-                    setBullets(gameState.bullets);
-                }
-                break;
-        }
-    }, [playerId]);
-
-    const sendMessage = useCallback((destination, body) => {
-        if (stompClient && isConnected) {
-            try {
-                stompClient.send(destination, {}, JSON.stringify(body));
-            } catch (error) {
-                console.error('Error sending message:', error);
-            }
-        }
-    }, [stompClient, isConnected]);
-
-    useEffect(() => {
-        let client = null;
-        let socket = null;
-
-        const connectWebSocket = () => {
-            try {
-                socket = new SockJS('http://localhost:3001/battle-city-websocket');
-                client = Stomp.over(() => socket);
-
-                client.reconnect_delay = 5000;
-                client.debug = () => {};
-
-                const onConnect = () => {
-                    setIsConnected(true);
-                    setStompClient(client);
-
-                    client.subscribe('/topic/game-updates', (message) => {
-                        try {
-                            const gameState = JSON.parse(message.body);
-                            handleGameState(gameState);
-                        } catch (error) {
-                            console.error('Error processing message:', error);
+                        players: {
+                            ...prev.players,
+                            [update.player.id]: update.player,
                         }
-                    });
-
-                    client.send('/app/player-join', {}, JSON.stringify({
-                        id: playerId,
-                        name: playerName,
-                        position: initialPosition,
-                        direction: 'down'
                     }));
-                };
-
-                const onError = (error) => {
-                    setIsConnected(false);
-                    setTimeout(connectWebSocket, 5000);
-                };
-
-                client.connect({}, onConnect, onError);
-
-            } catch (error) {
-                setTimeout(connectWebSocket, 5000);
-            }
-        };
-
-        connectWebSocket();
-
-        return () => {
-            if (client && client.connected) {
-                try {
-                    client.send('/app/player-disconnect', {}, JSON.stringify({ 
-                        id: playerId 
-                    }));
-                    client.disconnect();
-                } catch (error) {
-                    console.error('Error during cleanup:', error);
-                }
-            }
-            if (socket) {
-                socket.close();
-            }
-        };
-    }, [playerId, playerName, initialPosition, handleGameState]);
-
-    const movePlayer = useCallback((direction) => {
-        setPlayer(prev => {
-            let newX = prev.position.x;
-            let newY = prev.position.y;
-
-            switch (direction) {
-                case 'up':
-                    newY = newY - MOVEMENT_SPEED;
                     break;
-                case 'down':
-                    newY = newY + MOVEMENT_SPEED;
-                    break;
-                case 'left':
-                    newX = newX - MOVEMENT_SPEED;
-                    break;
-                case 'right':
-                    newX = newX + MOVEMENT_SPEED;
-                    break;
+                default:
+                    console.log('Mensaje desconocido:', update);
             }
-
-            const maxX = mapDataLocal[0].length - 1;
-            const maxY = mapDataLocal.length - 1;
-            newX = Math.max(0, Math.min(maxX, newX));
-            newY = Math.max(0, Math.min(maxY, newY));
-
-            const gridX = Math.floor(newX);
-            const gridY = Math.floor(newY);
-
-            if (!collisionUtils.checkCollision({ x: gridX, y: gridY })) {
-                const newPosition = { x: newX, y: newY };
-                
-                setAllPlayers(prevPlayers => ({
-                    ...prevPlayers,
-                    [playerId]: {
-                        ...prevPlayers[playerId],
-                        position: newPosition,
-                        direction
-                    }
-                }));
-
-                sendMessage('/app/player-action', {
-                    type: 'PLAYER_UPDATE',
-                    playerId,
-                    position: newPosition,
-                    direction
-                });
-
-                return {
-                    ...prev,
-                    position: newPosition,
-                    direction
-                };
-            }
-
-            return {
-                ...prev,
-                direction
-            };
-        });
-    }, [playerId, collisionUtils, sendMessage]);
-
-    const shootBullet = useCallback(() => {
-        let bulletX = player.position.x;
-        let bulletY = player.position.y;
-
-        switch (player.direction) {
-            case 'up':
-                bulletY -= 0.5;
-                break;
-            case 'down':
-                bulletY += 0.5;
-                break;
-            case 'left':
-                bulletX -= 0.5;
-                break;
-            case 'right':
-                bulletX += 0.5;
-                break;
+        } catch (error) {
+            console.error('Error procesando mensaje:', error);
         }
-
-        const bullet = {
-            id: `${playerId}-${Date.now()}`,
-            x: bulletX,
-            y: bulletY,
-            direction: player.direction,
-            playerId
-        };
-
-        setBullets(prev => [...prev, bullet]);
-        sendMessage('/app/player-action', {
-            type: 'BULLET_UPDATE',
-            playerId,
-            bullet
-        });
-    }, [player, playerId, sendMessage]);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setBullets(prevBullets =>
-                prevBullets
-                    .map(bullet => {
-                        let { x, y, direction } = bullet;
-                        
-                        switch (direction) {
-                            case 'up': y -= BULLET_SPEED; break;
-                            case 'down': y += BULLET_SPEED; break;
-                            case 'left': x -= BULLET_SPEED; break;
-                            case 'right': x += BULLET_SPEED; break;
-                            default: break;
-                        }
-
-                        // Verificar colisiones con paredes
-                        const nextGridX = Math.floor(x);
-                        const nextGridY = Math.floor(y);
-
-                        if (collisionUtils.checkCollision({ x: nextGridX, y: nextGridY }) || 
-                            x < 0 || x >= mapDataLocal[0].length || 
-                            y < 0 || y >= mapDataLocal.length) {
-                            return null;
-                        }
-
-                        return { ...bullet, x, y };
-                    })
-                    .filter(Boolean)
-            );
-        }, 16);
-
-        return () => clearInterval(interval);
     }, []);
 
-    const handlePlayerAction = useCallback((action) => {
-        switch (action.type) {
-            case 'MOVE':
-                movePlayer(action.direction);
-                break;
-            case 'SHOOT':
-                shootBullet();
-                break;
-        }
-    }, [movePlayer, shootBullet]);
+    useEffect(() => {
+        const socket = new SockJS('http://localhost:8080/ws');
+        const client = new Client({
+            webSocketFactory: () => socket,
+            reconnectDelay: 5000,
+            debug: str => console.log('STOMP Debug:', str),
+        });
 
-    usePlayerInput(handlePlayerAction);
+        client.onConnect = () => {
+            console.log('Conectado al servidor');
+            setIsConnected(true);
+            setStompClient(client);
+
+            client.subscribe('/topic/game-updates', handleGameUpdate);
+
+            client.publish({
+                destination: '/app/game-join',
+                body: JSON.stringify({
+                    type: 'PLAYER_JOIN',
+                    player: { id: playerId, name: playerName, position: initialPosition, direction: 'down' }
+                })
+            });
+        };
+
+        client.onDisconnect = () => setIsConnected(false);
+        client.onStompError = (error) => console.error('Error STOMP:', error);
+
+        client.activate();
+
+        return () => {
+            if (client.connected) client.deactivate();
+        };
+    }, [playerId, playerName, initialPosition, handleGameUpdate]);
+
+    const movePlayer = useCallback((direction) => {
+        const currentPlayer = gameState.players[playerId];
+        let newX = currentPlayer.position.x;
+        let newY = currentPlayer.position.y;
+
+        switch (direction) {
+            case 'up': newY -= MOVEMENT_SPEED; break;
+            case 'down': newY += MOVEMENT_SPEED; break;
+            case 'left': newX -= MOVEMENT_SPEED; break;
+            case 'right': newX += MOVEMENT_SPEED; break;
+        }
+
+        if (!collisionUtils.checkCollision({ x: Math.floor(newX), y: Math.floor(newY) })) {
+            const newPosition = { x: newX, y: newY };
+
+            stompClient.publish({
+                destination: '/app/game-move',
+                body: JSON.stringify({
+                    type: 'PLAYER_MOVE',
+                    playerId,
+                    position: newPosition,
+                    direction,
+                })
+            });
+
+            setGameState(prev => ({
+                ...prev,
+                players: {
+                    ...prev.players,
+                    [playerId]: {
+                        ...currentPlayer,
+                        position: newPosition,
+                        direction,
+                    }
+                }
+            }));
+        }
+    }, [playerId, stompClient, gameState.players, collisionUtils]);
+
+    // Hook para capturar entrada del jugador
+    usePlayerInput(action => {
+        if (action.type === 'MOVE') movePlayer(action.direction);
+    });
 
     return (
         <div className="game-container">
-            {Object.values(allPlayers).map(playerData => (
-                <Player
-                    key={playerData.id}
-                    id={playerData.id}
-                    name={playerData.name}
-                    position={playerData.position}
-                    direction={playerData.direction}
-                    isCurrentPlayer={playerData.id === playerId}
-                />
-            ))}
-            {bullets.map(bullet => (
-                <Bullet
-                    key={bullet.id}
-                    x={bullet.x}
-                    y={bullet.y}
-                    direction={bullet.direction}
-                />
+            {Object.values(gameState.players).map(player => (
+                <Player key={player.id} {...player} isCurrentPlayer={player.id === playerId} />
             ))}
         </div>
     );
