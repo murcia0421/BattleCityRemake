@@ -2,12 +2,13 @@ import { Client } from '@stomp/stompjs';
 import React, { useEffect, useState } from 'react';
 import SockJS from 'sockjs-client';
 
-const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
+const WaitingRoom = ({ playerName, onStartGame }) => {
     const [stompClient, setStompClient] = useState(null);
     const [players, setPlayers] = useState([]);
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
     const [hasJoined, setHasJoined] = useState(false);
     const [myPlayerId, setMyPlayerId] = useState(null);
+    const [playerNameInput, setPlayerNameInput] = useState('');
 
     useEffect(() => {
         const connectToWebSocket = () => {
@@ -28,12 +29,22 @@ const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
                             try {
                                 const data = JSON.parse(message.body);
                                 
+                                // Limitar a 4 jugadores
+                                if (data.length > 4) {
+                                    return;
+                                }
+
                                 if (Array.isArray(data)) {
                                     setPlayers(data);
                                     return;
                                 }
 
                                 setPlayers(current => {
+                                    // No más de 4 jugadores
+                                    if (current.length >= 4 && !current.find(p => p.id === data.id)) {
+                                        return current;
+                                    }
+
                                     const existingPlayer = current.find(p => p.id === data.id);
                                     if (existingPlayer) {
                                         return current.map(p => p.id === data.id ? data : p);
@@ -86,15 +97,25 @@ const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
     }, [myPlayerId, hasJoined]);
 
     const addPlayer = () => {
+        // Validar nombre y límite de jugadores
+        if (!playerNameInput.trim()) {
+            alert('Por favor, ingresa un nombre');
+            return;
+        }
+
+        if (players.length >= 4) {
+            alert('La sala está llena. No se pueden agregar más jugadores.');
+            return;
+        }
+
         if (!stompClient || !stompClient.connected) {
             console.error('No hay conexión con el servidor');
             return;
         }
-
-        console.log('Intentando añadir jugador...'); 
         
         const playerData = {
             id: null,
+            name: playerNameInput.trim(),
             position: null,
             direction: "down"
         };
@@ -110,8 +131,13 @@ const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
         }
     };
 
-    const startGameWithoutPlayers = () => {
-        console.log('Iniciando el juego sin jugadores...');
+    const startGame = () => {
+        // Validar que haya al menos 2 jugadores
+        if (players.length < 2) {
+            alert('Se necesitan al menos 2 jugadores para iniciar el juego');
+            return;
+        }
+
         if (onStartGame) {
             onStartGame();
         }
@@ -122,7 +148,38 @@ const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
             <h2>Battle City Remake</h2>
             <p>Sala de Espera</p>
             <p>Estado: {connectionStatus}</p>
-            <p>Jugador: {playerName || 'Sin nombre'}</p>
+            
+            {/* Input para nombre de jugador */}
+            <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                marginBottom: '20px' 
+            }}>
+                <input 
+                    type="text" 
+                    value={playerNameInput}
+                    onChange={(e) => setPlayerNameInput(e.target.value)}
+                    placeholder="Ingresa tu nombre"
+                    style={{ 
+                        padding: '10px', 
+                        marginRight: '10px',
+                        width: '200px'
+                    }}
+                />
+                <button 
+                    onClick={addPlayer} 
+                    style={{ 
+                        backgroundColor: '#4CAF50', 
+                        color: 'white',
+                        padding: '10px 20px'
+                    }}
+                    disabled={players.length >= 4}
+                >
+                    Unirse
+                </button>
+            </div>
+
             <p>Total de jugadores: {players.length}/4</p>
             <div>
                 <h3>Jugadores en sala:</h3>
@@ -132,36 +189,24 @@ const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
                     <ul>
                         {players.map((player, index) => (
                             <li key={player.id || index}>
-                                {player.id} {player.id === myPlayerId ? '(Tú)' : ''}
+                                {player.name} {player.id === myPlayerId ? '(Tú)' : ''}
                             </li>
                         ))}
                     </ul>
                 )}
             </div>
+            
             <button 
-                onClick={addPlayer} 
-                style={{ backgroundColor: '#4CAF50' }}
-            >
-                Unirse
-            </button>
-            <button 
-                onClick={onStartGame} 
+                onClick={startGame} 
                 style={{ 
-                    backgroundColor: '#4CAF50',
-                    marginLeft: '10px'
+                    backgroundColor: players.length < 2 ? '#cccccc' : '#4CAF50',
+                    color: 'white',
+                    padding: '10px 20px',
+                    marginTop: '10px'
                 }}
+                disabled={players.length < 2}
             >
                 Comenzar Juego
-            </button>
-            <button
-                onClick={startGameWithoutPlayers}
-                style={{
-                    backgroundColor: '#f44336',
-                    marginLeft: '10px',
-                    color: '#fff'
-                }}
-            >
-                Forzar Inicio
             </button>
         </div>
     );

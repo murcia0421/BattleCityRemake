@@ -11,15 +11,16 @@ const TILE_SIZE = 32;
 const MOVEMENT_SPEED = 1;
 const BULLET_SPEED = 0.15;
 
-export default function PlayerController({ playerId, initialPosition, mapData }) {
+export default function PlayerController({ playerId, playerName, initialPosition, mapData }) {
     const [player, setPlayer] = useState({ 
         id: playerId, 
+        name: playerName,
         position: initialPosition,
         direction: 'down' 
     });
     
     const [allPlayers, setAllPlayers] = useState({
-        [playerId]: { id: playerId, position: initialPosition, direction: 'down' }
+        [playerId]: { id: playerId, name: playerName, position: initialPosition, direction: 'down' }
     });
     
     const [bullets, setBullets] = useState([]);
@@ -54,7 +55,10 @@ export default function PlayerController({ playerId, initialPosition, mapData })
             case 'PLAYER_JOIN':
                 setAllPlayers(prev => ({
                     ...prev,
-                    [gameState.playerId]: gameState.players[gameState.playerId]
+                    [gameState.playerId]: {
+                        ...gameState.players[gameState.playerId],
+                        name: gameState.players[gameState.playerId].name || 'Player'
+                    }
                 }));
                 break;
 
@@ -120,6 +124,7 @@ export default function PlayerController({ playerId, initialPosition, mapData })
 
                     client.send('/app/player-join', {}, JSON.stringify({
                         id: playerId,
+                        name: playerName,
                         position: initialPosition,
                         direction: 'down'
                     }));
@@ -154,7 +159,7 @@ export default function PlayerController({ playerId, initialPosition, mapData })
                 socket.close();
             }
         };
-    }, [playerId, initialPosition, handleGameState]);
+    }, [playerId, playerName, initialPosition, handleGameState]);
 
     const movePlayer = useCallback((direction) => {
         setPlayer(prev => {
@@ -305,6 +310,7 @@ export default function PlayerController({ playerId, initialPosition, mapData })
                 <Player
                     key={playerData.id}
                     id={playerData.id}
+                    name={playerData.name}
                     position={playerData.position}
                     direction={playerData.direction}
                     isCurrentPlayer={playerData.id === playerId}

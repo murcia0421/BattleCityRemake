@@ -1,10 +1,10 @@
+import { useMsal } from "@azure/msal-react";
 import React, { useState } from 'react';
 import './App.css';
 import GameBoard from './components/GameBoard/GameBoard';
 import StartScreen from './components/StartScreen/StartScreen';
 import TankColorSelector from './components/TankColorSelector/TankColorSelector';
 import WaitingRoom from './components/WaitingRoom/WaitingRoom';
-import { useMsal } from "@azure/msal-react";
 
 function App() {
     const { instance, accounts } = useMsal();
@@ -14,10 +14,10 @@ function App() {
 
     const login = () => {
         instance.loginPopup({
-          scopes: ["user.read"],
+            scopes: ["user.read"],
         }).catch((error) => console.error(error));
     };
-  
+
     const logout = () => {
         instance.logoutPopup();
     };
@@ -48,9 +48,20 @@ function App() {
             case 'colorSelection':
                 return <TankColorSelector onColorSelect={handleColorSelect} />;
             case 'waitingRoom':
-                return <WaitingRoom onJoin={handleJoin} playerName={playerName} onStartGame={handleStartGame} />;
+                return (
+                    <WaitingRoom
+                        onJoin={handleJoin}
+                        playerName={playerName}
+                        onStartGame={handleStartGame}
+                    />
+                );
             case 'gameBoard':
-                return <GameBoard tankColor={tankColor} playerName={playerName} />;
+                return (
+                    <GameBoard
+                        tankColor={tankColor}
+                        playerName={playerName}
+                    />
+                );
             default:
                 return <StartScreen onStart={handleStart} />;
         }
@@ -62,10 +73,14 @@ function App() {
             {accounts.length > 0 ? (
                 <div>
                     {renderScreen()}
-                    <button onClick={logout}>Logout</button>
+                    <button onClick={logout} className="auth-button">
+                        Logout
+                    </button>
                 </div>
-            ) : ( 
-                <button onClick={login}>Login</button>
+            ) : (
+                <button onClick={login} className="auth-button">
+                    Login
+                </button>
             )}
         </div>
     );
