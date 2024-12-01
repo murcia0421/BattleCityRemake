@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
 import { Client } from '@stomp/stompjs';
+import React, { useEffect, useState } from 'react';
 import SockJS from 'sockjs-client';
 
 const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
@@ -30,14 +30,10 @@ const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
                                 
                                 if (Array.isArray(data)) {
                                     setPlayers(data);
-                                    // Verificar si este cliente ya está en la lista
-                                    const isAlreadyJoined = data.some(player => player.id === myPlayerId);
-                                    setHasJoined(isAlreadyJoined);
                                     return;
                                 }
 
                                 setPlayers(current => {
-                                    // Evitar duplicados
                                     const existingPlayer = current.find(p => p.id === data.id);
                                     if (existingPlayer) {
                                         return current.map(p => p.id === data.id ? data : p);
@@ -45,7 +41,6 @@ const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
                                     return [...current, data];
                                 });
 
-                                // Si este es nuestro nuevo jugador
                                 if (!hasJoined && data.id) {
                                     setMyPlayerId(data.id);
                                     setHasJoined(true);
@@ -96,11 +91,6 @@ const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
             return;
         }
 
-        if (hasJoined || players.length >= 4) {
-            console.log('No puedes unirte: Ya estás unido o la sala está llena');
-            return;
-        }
-
         console.log('Intentando añadir jugador...'); 
         
         const playerData = {
@@ -120,10 +110,12 @@ const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
         }
     };
 
-    const canStartGame = players.length >= 2
-    console.log(canStartGame);
-    console.log(players.length);
-
+    const startGameWithoutPlayers = () => {
+        console.log('Iniciando el juego sin jugadores...');
+        if (onStartGame) {
+            onStartGame();
+        }
+    };
 
     return (
         <div>
@@ -148,26 +140,29 @@ const WaitingRoom = ({ onJoin, playerName, onStartGame }) => {
             </div>
             <button 
                 onClick={addPlayer} 
-                disabled={hasJoined || players.length >= 4}
-                style={{ backgroundColor: hasJoined ? '#cccccc' : '#4CAF50' }}
+                style={{ backgroundColor: '#4CAF50' }}
             >
-                {hasJoined ? 'Ya unido' : 'Unirse'}
+                Unirse
             </button>
             <button 
                 onClick={onStartGame} 
-                disabled={!canStartGame}
                 style={{ 
-                    backgroundColor: canStartGame ? '#4CAF50' : '#cccccc',
+                    backgroundColor: '#4CAF50',
                     marginLeft: '10px'
                 }}
             >
-                Comenzar Juego ({players.length}/2 necesarios)
+                Comenzar Juego
             </button>
-            <p style={{ fontSize: '0.8em', color: '#666' }}>
-                {!hasJoined ? 'Debes unirte para poder comenzar' : 
-                 players.length < 2 ? 'Se necesitan al menos 2 jugadores para comenzar' : 
-                 canStartGame ? 'Puedes comenzar el juego' : ''}
-            </p>
+            <button
+                onClick={startGameWithoutPlayers}
+                style={{
+                    backgroundColor: '#f44336',
+                    marginLeft: '10px',
+                    color: '#fff'
+                }}
+            >
+                Forzar Inicio
+            </button>
         </div>
     );
 };
