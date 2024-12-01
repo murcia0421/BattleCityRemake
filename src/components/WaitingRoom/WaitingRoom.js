@@ -1,6 +1,7 @@
 import { Client } from '@stomp/stompjs';
 import React, { useEffect, useState } from 'react';
 import SockJS from 'sockjs-client';
+import './WaitingRoom.css';
 
 const WaitingRoom = ({ playerName, onStartGame }) => {
     const [stompClient, setStompClient] = useState(null);
@@ -144,70 +145,54 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
     };
 
     return (
-        <div>
-            <h2>Battle City Remake</h2>
-            <p>Sala de Espera</p>
-            <p>Estado: {connectionStatus}</p>
-            
-            {/* Input para nombre de jugador */}
-            <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                marginBottom: '20px' 
-            }}>
-                <input 
-                    type="text" 
-                    value={playerNameInput}
-                    onChange={(e) => setPlayerNameInput(e.target.value)}
-                    placeholder="Ingresa tu nombre"
-                    style={{ 
-                        padding: '10px', 
-                        marginRight: '10px',
-                        width: '200px'
-                    }}
-                />
+        <div className="waiting-room-container">
+            <div className="waiting-room-box">
+                <h2 className="waiting-room-title">Battle City Remake</h2>
+                <p className="waiting-room-subtitle">Sala de Espera</p>
+                <p className="connection-status">Estado: {connectionStatus}</p>
+                
+                {/* Input para nombre de jugador */}
+                <div className="player-input-container">
+                    <input 
+                        type="text" 
+                        value={playerNameInput}
+                        onChange={(e) => setPlayerNameInput(e.target.value)}
+                        placeholder="Ingresa tu nombre"
+                        className="player-input"
+                    />
+                    <button 
+                        onClick={addPlayer} 
+                        className="add-player-button"
+                        disabled={players.length >= 4}
+                    >
+                        Unirse
+                    </button>
+                </div>
+
+                <p>Total de jugadores: {players.length}/4</p>
+                <div>
+                    <h3>Jugadores en sala:</h3>
+                    {players.length === 0 ? (
+                        <p>No hay jugadores en la sala</p>
+                    ) : (
+                        <ul className="players-list">
+                            {players.map((player, index) => (
+                                <li key={player.id || index}>
+                                    {player.name} {player.id === myPlayerId ? '(Tú)' : ''}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+                
                 <button 
-                    onClick={addPlayer} 
-                    style={{ 
-                        backgroundColor: '#4CAF50', 
-                        color: 'white',
-                        padding: '10px 20px'
-                    }}
-                    disabled={players.length >= 4}
+                    onClick={startGame} 
+                    className="start-game-button"
+                    disabled={players.length < 2}
                 >
-                    Unirse
+                    Comenzar Juego
                 </button>
             </div>
-
-            <p>Total de jugadores: {players.length}/4</p>
-            <div>
-                <h3>Jugadores en sala:</h3>
-                {players.length === 0 ? (
-                    <p>No hay jugadores en la sala</p>
-                ) : (
-                    <ul>
-                        {players.map((player, index) => (
-                            <li key={player.id || index}>
-                                {player.name} {player.id === myPlayerId ? '(Tú)' : ''}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-            
-            <button 
-                onClick={startGame} 
-                style={{ 
-                    backgroundColor: players.length < 2 ? '#cccccc' : '#4CAF50',
-                    color: 'white',
-                    padding: '10px 20px',
-                    marginTop: '10px'
-                }}
-                disabled={players.length < 2}
-            >
-                Comenzar Juego
-            </button>
         </div>
     );
 };
