@@ -55,24 +55,55 @@ body {
   color: black;
 }
 
-.start-screen button {
+
+.start-screen button,
+.add-player-button,
+.start-game-button {
   padding: 15px 30px;
   font-size: 1rem;
-  background-color: rgba(139, 0, 0, 0.8);
-  color: #000;
-  border: 5px solid #b22222;
   border-radius: 5px;
+  border: 5px solid #b22222;
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.1s;
   font-family: 'Press Start 2P', cursive;
 }
 
-.start-screen button:hover {
-  background-color: #ffffff;
+.start-screen button {
+  background-color: rgba(139, 0, 0, 0.8);
+  color: #000;
+}
+
+.add-player-button {
+  background-color: #b22222;
+  color: #ffffff;
+  border: none;
+}
+
+.start-game-button {
+  background-color: #000;
+  color: #ffffff;
+  font-size: 13px;
+}
+
+button:hover {
   transform: scale(1.05);
 }
 
-/* Estilos específicos para la sala de espera */
+.start-screen button:hover {
+  background-color: #ffffff;
+}
+
+.add-player-button:hover:enabled,
+.start-game-button:hover:enabled {
+  background-color: #e63900;
+}
+
+button:disabled {
+  background-color: #666666;
+  cursor: not-allowed;
+}
+
+/* Waiting room styles */
 .waiting-room-container {
   display: flex;
   flex-direction: column;
@@ -81,7 +112,6 @@ body {
   height: 100vh;
   background-color: #000000;
   color: #ffffff;
-  font-family: 'Press Start 2P', cursive;
 }
 
 .waiting-room-box {
@@ -127,27 +157,6 @@ body {
   color: #aaaaaa;
 }
 
-.add-player-button {
-  background-color: #b22222;
-  color: #ffffff;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.3s, transform 0.2s;
-}
-
-.add-player-button:disabled {
-  background-color: #666666;
-  cursor: not-allowed;
-}
-
-.add-player-button:hover:enabled {
-  background-color: #e63900;
-  transform: scale(1.05);
-}
-
 .players-list {
   list-style: none;
   padding: 0;
@@ -167,74 +176,8 @@ body {
   padding-left: 10px;
 }
 
-.start-game-button {
-  background-color: #32cd32;
-  color: #ffffff;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s, transform 0.2s;
-}
-
-.start-game-button:disabled {
-  background-color: #666666;
-  cursor: not-allowed;
-}
-
-.start-game-button:hover:enabled {
-  background-color: #2ea02e;
-  transform: scale(1.05);
-}
-
 .connection-status {
   margin-top: 10px;
   font-size: 14px;
   color: #aaaaaa;
-}
-
-/* Botón para unirse */
-.add-player-button {
-  background-color: #b22222;
-  color: #ffffff;
-  padding: 10px 20px;
-  border: 5px solid #b22222;
-  border-radius: 5px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.1s;
-  font-family: 'Press Start 2P', cursive;
-}
-
-.add-player-button:disabled {
-  background-color: #666666;
-  cursor: not-allowed;
-}
-
-.add-player-button:hover:enabled {
-  background-color: #e63900;
-  transform: scale(1.05);
-}
-
-.start-game-button {
-  background-color: #b22222;
-  color: #ffffff;
-  padding: 10px 20px;
-  border: 5px solid #b22222;
-  border-radius: 5px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.1s;
-  font-family: 'Press Start 2P', cursive;
-}
-
-.start-game-button:disabled {
-  background-color: #666666;
-  cursor: not-allowed;
-}
-
-.start-game-button:hover:enabled {
-  background-color: #e63900;
-  transform: scale(1.05);
 }
