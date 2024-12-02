@@ -1,7 +1,7 @@
-import React from 'react';
+import PropTypes from 'prop-types';
+import React, { useMemo } from 'react';
 import './Player.css';
 
-// Importa todas las imágenes de los tanques
 import tankYellow from '../../assets/images/tank.png';
 import tankBlue from '../../assets/images/tankblue.png';
 import tankGreen from '../../assets/images/tankgreen.png';
@@ -10,44 +10,49 @@ import tankPurple from '../../assets/images/tankpurple.png';
 const TILE_SIZE = 32;
 
 const Player = ({ position, direction, tankColor }) => {
-  // Mapeo de colores con sus imágenes correspondientes
-  const tankImages = {
+  const tankImages = useMemo(() => ({
     'Azul': tankBlue,
     'Verde': tankGreen,
     'Morado': tankPurple,
     'Amarillo': tankYellow,
-  };
+  }), []);
 
-  // Selección de la imagen según el color
   const currentTankImage = tankImages[tankColor] || tankImages['Amarillo'];
 
-  const getRotation = (direction) => {
-    switch (direction) {
-      case 'up': return 180;
-      case 'right': return 270;
-      case 'down': return 0;
-      case 'left': return 90;
-      default: return 0;
-    }
+  const directionToRotation = {
+    up: 180,
+    right: 270,
+    down: 0,
+    left: 90,
+  };
+  
+  const getRotation = (dir) => directionToRotation[dir] || 0;
+
+  const playerStyle = {
+    left: `${position.x * TILE_SIZE}px`,
+    top: `${position.y * TILE_SIZE}px`,
+    position: 'absolute',
+    transform: `rotate(${getRotation(direction)}deg)`,
   };
 
   return (
-    <div
-      className="player"
-      style={{
-        left: `${position.x * TILE_SIZE}px`,
-        top: `${position.y * TILE_SIZE}px`,
-        position: 'absolute',
-        transform: `rotate(${getRotation(direction)}deg)`,
-      }}
-    >
+    <div className="player" style={playerStyle}>
       <img 
         src={currentTankImage} 
         alt={`Tank ${tankColor}`} 
-        style={{ width: '100%', height: '100%' }} 
+        className="tank-image" 
       />
     </div>
   );
 };
 
-export default Player;
+Player.propTypes = {
+  position: PropTypes.shape({
+    x: PropTypes.number.isRequired,
+    y: PropTypes.number.isRequired,
+  }).isRequired,
+  direction: PropTypes.oneOf(['up', 'right', 'down', 'left']).isRequired, 
+  tankColor: PropTypes.oneOf(['Azul', 'Verde', 'Morado', 'Amarillo']).isRequired, 
+};
+
+export default React.memo(Player);
