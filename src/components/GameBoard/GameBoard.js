@@ -1,12 +1,11 @@
+import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import CollisionUtils from '../../utils/collisionUtils';
-import Bullet from '../Bullets/Bullet';
 import Map from '../Map/map';
 import mapData from '../Map/MapData';
 
 const GameBoard = ({ tankColor, playersData }) => {
-  const [players, setPlayers] = useState(playersData || []); // Inicializar con los jugadores de la sala
-  const [bullets, setBullets] = useState([]); 
+  const [players, setPlayers] = useState(playersData || []); 
   const collisionUtils = new CollisionUtils(mapData);
 
   useEffect(() => {
@@ -24,11 +23,15 @@ const GameBoard = ({ tankColor, playersData }) => {
         tankColor={tankColor}
         mapData={mapData}
       />
-      {bullets.map((bullet) => (
-        <Bullet key={bullet.id} {...bullet} />
-      ))}
+      {/* Bullet rendering removed as no bullets are tracked */}
     </div>
   );
+};
+
+// PropTypes validation for the props
+GameBoard.propTypes = {
+  tankColor: PropTypes.string.isRequired,  // tankColor should be a string
+  playersData: PropTypes.array.isRequired, // playersData should be an array
 };
 
 export default GameBoard;
