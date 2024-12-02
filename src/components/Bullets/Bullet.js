@@ -1,9 +1,8 @@
-// src/components/Bullet.js
+import PropTypes from 'prop-types';
 import React from 'react';
-import bulletImage from '../../assets/images/bullet.png'; // Asegúrate de tener la imagen de la bala
-import './Bullet.css';
+import bulletImage from '../../assets/images/bullet.png';
 
-const TILE_SIZE = 32; // Ajusta el tamaño según sea necesario
+const TILE_SIZE = 32; 
 
 const Bullet = ({ x, y, direction }) => {
   const getRotation = (direction) => {
@@ -33,6 +32,13 @@ const Bullet = ({ x, y, direction }) => {
       <img src={bulletImage} alt="Bullet" />
     </div>
   );
+};
+
+// PropTypes validation for the props
+Bullet.propTypes = {
+  x: PropTypes.number.isRequired, // x should be a number
+  y: PropTypes.number.isRequired, // y should be a number
+  direction: PropTypes.oneOf(['up', 'down', 'left', 'right']).isRequired, // direction should be one of these four strings
 };
 
 export default Bullet;
