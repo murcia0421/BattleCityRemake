@@ -1,276 +1,231 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import usePlayerInput from '../hooks/usePlayerInput';
+import { Client } from '@stomp/stompjs';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import SockJS from 'sockjs-client';
-import { Stomp } from '@stomp/stompjs';
-import Bullet from '../components/Bullets/Bullet';
 import Player from '../components/Player/Player';
+import BulletController from './BulletController';
+import usePlayerInput from '../hooks/usePlayerInput';
 import CollisionUtils from '../utils/collisionUtils';
-import mapDataLocal from '../components/Map/MapData';
 
-export default function PlayerController({ playerId, initialPosition, mapData }) {
-    const [player, setPlayer] = useState({ 
-        id: playerId, 
-        position: initialPosition, 
-        direction: 'down' 
+const TILE_SIZE = 1; // Cada celda es 1 unidad
+const MOVEMENT_SPEED = 0.1;
+
+export default function PlayerController({ playerId, playerName, initialPosition, mapData }) {
+    const [gameState, setGameState] = useState({
+        players: {
+            [playerId]: { id: playerId, name: playerName, position: initialPosition, direction: 'down' }
+        },
     });
-    
-    const [allPlayers, setAllPlayers] = useState({
-        [playerId]: { id: playerId, position: initialPosition, direction: 'down' }
-    });
-    
-    const [bullets, setBullets] = useState([]);
-    const collisionUtils = new CollisionUtils(mapDataLocal);
     const [stompClient, setStompClient] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
+    const collisionUtils = new CollisionUtils(mapData);
+    const bulletControllerRef = useRef(null);
 
-    const handleGameState = useCallback((gameState) => {
-        switch (gameState.type) {
-            case 'PLAYER_UPDATE':
-                setAllPlayers(prev => ({
-                    ...prev,
-                    [gameState.playerId]: gameState.players[gameState.playerId]
-                }));
-                break;
+   const handleGameUpdate = useCallback((message) => {
+       if (!message || !message.body) return;
 
-            case 'PLAYER_JOIN':
-                setAllPlayers(prev => ({
-                    ...prev,
-                    [gameState.playerId]: gameState.players[gameState.playerId]
-                }));
-                break;
+       try {
+           const update = JSON.parse(message.body);
+           console.log('Actualización recibida:', update);
 
-            case 'BULLET_UPDATE':
-                if (gameState.bullets) {
-                    setBullets(gameState.bullets);
-                }
-                break;
+           switch (update.type) {
+               case 'PLAYER_MOVE':
+                   // Solo actualizamos si el movimiento es de otro jugador
+                   if (update.playerId !== playerId) {
+                       setGameState(prev => ({
+                           ...prev,
+                           players: {
+                               ...prev.players,
+                               [update.playerId]: {
+                                   ...prev.players[update.playerId],
+                                   position: update.position,
+                                   direction: update.direction,
+                               }
+                           }
+                       }));
+                   }
+                   break;
+               case 'PLAYER_JOIN':
+                   console.log('Jugador uniéndose:', update.player);
+                   setGameState(prev => ({
+                       ...prev,
+                       players: {
+                           ...prev.players,
+                           [update.player.id]: update.player,
+                       }
+                   }));
+                   break;
+               default:
+                   console.log('Mensaje no manejado:', update);
+           }
+       } catch (error) {
+           console.error('Error procesando mensaje:', error);
+       }
+   }, [playerId]);
 
-            case 'PLAYER_DISCONNECT':
-                setAllPlayers(prev => {
-                    const newPlayers = { ...prev };
-                    delete newPlayers[gameState.playerId];
-                    return newPlayers;
-                });
-                break;
+   useEffect(() => {
+       const socket = new SockJS('http://localhost:8080/ws');
+       const client = new Client({
+           webSocketFactory: () => socket,
+           reconnectDelay: 5000,
+           debug: str => console.log('STOMP Debug:', str),
+       });
 
-            case 'STATE_UPDATE':
-                if (gameState.players) {
-                    setAllPlayers(gameState.players);
-                }
-                if (gameState.bullets) {
-                    setBullets(gameState.bullets);
-                }
-                break;
+       client.onConnect = () => {
+           console.log('Conectado al servidor');
+           setIsConnected(true);
+           setStompClient(client);
 
-            default:
-                console.warn('Unknown game state type:', gameState.type);
+           client.subscribe('/topic/game-updates', handleGameUpdate);
+
+           client.publish({
+               destination: '/app/game-join',
+               body: JSON.stringify({
+                   type: 'PLAYER_JOIN',
+                   player: { 
+                       id: playerId, 
+                       name: playerName, 
+                       position: initialPosition, 
+                       direction: 'down' 
+                   }
+               })
+           });
+       };
+
+       client.onDisconnect = () => {
+           console.log('Desconectado del servidor');
+           setIsConnected(false);
+       };
+       
+       client.onStompError = (error) => console.error('Error STOMP:', error);
+
+       client.activate();
+
+       return () => {
+           if (client.connected) client.deactivate();
+       };
+   }, [playerId, playerName, initialPosition, handleGameUpdate]);
+
+   const movePlayer = useCallback((direction) => {
+    if (!stompClient?.connected || !isConnected) {
+        console.log('No hay conexión, no se puede mover');
+        return;
+    }
+
+    const currentPlayer = gameState.players[playerId];
+    if (!currentPlayer) {
+        console.log('Jugador no encontrado');
+        return;
+    }
+
+    // Calcular la próxima posición
+    let newX = currentPlayer.position.x;
+    let newY = currentPlayer.position.y;
+    
+    switch (direction) {
+        case 'up': newY -= MOVEMENT_SPEED; break;
+        case 'down': newY += MOVEMENT_SPEED; break;
+        case 'left': newX -= MOVEMENT_SPEED; break;
+        case 'right': newX += MOVEMENT_SPEED; break;
+    }
+
+    // Verificar colisiones en las cuatro esquinas del tanque
+    const corners = [
+        { x: Math.floor(newX), y: Math.floor(newY) },                 // Esquina superior izquierda
+        { x: Math.floor(newX + 0.8), y: Math.floor(newY) },          // Esquina superior derecha
+        { x: Math.floor(newX), y: Math.floor(newY + 0.8) },          // Esquina inferior izquierda
+        { x: Math.floor(newX + 0.8), y: Math.floor(newY + 0.8) }     // Esquina inferior derecha
+    ];
+
+    // Verificar si alguna esquina colisiona
+    const hasCollision = corners.some(corner => {
+        // Verificar límites del mapa
+        if (corner.x < 0 || corner.x >= mapData[0].length || 
+            corner.y < 0 || corner.y >= mapData.length) {
+            return true;
         }
-    }, []);
+        // Verificar colisión con paredes
+        return collisionUtils.checkCollision(corner);
+    });
 
-    // Función para enviar mensajes de forma segura
-    const sendMessage = useCallback((destination, body) => {
-        if (stompClient && isConnected) {
-            try {
-                stompClient.send(destination, {}, JSON.stringify(body));
-            } catch (error) {
-                console.error('Error sending message:', error);
-            }
-        } else {
-            console.warn('WebSocket not connected, message not sent');
-        }
-    }, [stompClient, isConnected]);
+    if (!hasCollision) {
+        const newPosition = { x: newX, y: newY };
 
-    // Configuración de WebSocket
-    useEffect(() => {
-        let client = null;
-        let socket = null;
-
-        const connectWebSocket = () => {
-            try {
-                socket = new SockJS('http://localhost:3001/battle-city-websocket');
-                client = Stomp.over(function() {
-                    return socket;
-                });
-
-                client.reconnect_delay = 5000;
-                client.debug = () => {};
-
-                const onConnect = () => {
-                    console.log('WebSocket connected');
-                    setIsConnected(true);
-                    setStompClient(client);
-
-                    // Suscribirse a actualizaciones
-                    client.subscribe('/topic/game-updates', (message) => {
-                        try {
-                            const gameState = JSON.parse(message.body);
-                            handleGameState(gameState);
-                        } catch (error) {
-                            console.error('Error processing message:', error);
-                        }
-                    });
-
-                    // Anunciar que el jugador se ha unido
-                    client.send('/app/player-join', {}, JSON.stringify({
-                        id: playerId,
-                        position: initialPosition,
-                        direction: 'down'
-                    }));
-                };
-
-                const onError = (error) => {
-                    console.error('WebSocket connection error:', error);
-                    setIsConnected(false);
-                    setTimeout(connectWebSocket, 5000);
-                };
-
-                client.connect({}, onConnect, onError);
-
-            } catch (error) {
-                console.error('Error setting up WebSocket:', error);
-                setTimeout(connectWebSocket, 5000);
-            }
-        };
-
-        connectWebSocket();
-
-        // Cleanup
-        return () => {
-            if (client && client.connected) {
-                try {
-                    client.send('/app/player-disconnect', {}, JSON.stringify({ 
-                        id: playerId 
-                    }));
-                    client.disconnect();
-                } catch (error) {
-                    console.error('Error during cleanup:', error);
+        setGameState(prev => ({
+            ...prev,
+            players: {
+                ...prev.players,
+                [playerId]: {
+                    ...currentPlayer,
+                    position: newPosition,
+                    direction,
                 }
             }
-            if (socket) {
-                socket.close();
-            }
-        };
-    }, [playerId, initialPosition, handleGameState]);
+        }));
 
-    const handlePlayerAction = (action) => {
-        switch (action.type) {
+        stompClient.publish({
+            destination: '/app/game-move',
+            body: JSON.stringify({
+                type: 'PLAYER_MOVE',
+                playerId,
+                position: newPosition,
+                direction,
+            })
+        });
+    } else {
+        // Si hay colisión, solo actualizar la dirección
+        setGameState(prev => ({
+            ...prev,
+            players: {
+                ...prev.players,
+                [playerId]: {
+                    ...currentPlayer,
+                    direction,
+                }
+            }
+        }));
+
+        stompClient.publish({
+            destination: '/app/game-move',
+            body: JSON.stringify({
+                type: 'PLAYER_MOVE',
+                playerId,
+                position: currentPlayer.position,
+                direction,
+            })
+        });
+    }
+}, [playerId, stompClient, isConnected, gameState.players, collisionUtils, mapData]);
+
+    // Modificar el handler de input
+    usePlayerInput(action => {
+        switch(action.type) {
             case 'MOVE':
                 movePlayer(action.direction);
                 break;
             case 'SHOOT':
-                shootBullet();
-                break;
-            default:
+                bulletControllerRef.current?.shoot();
                 break;
         }
-    };
-
-    const movePlayer = (direction) => {
-        let newX = player.position.x;
-        let newY = player.position.y;
-
-        switch (direction) {
-            case 'up':
-                newY -= 1;
-                break;
-            case 'down':
-                newY += 1;
-                break;
-            case 'left':
-                newX -= 1;
-                break;
-            case 'right':
-                newX += 1;
-                break;
-            default:
-                break;
-        }
-
-        if (!collisionUtils.checkCollision({x: newX, y: newY})) {
-            const newPosition = { x: newX, y: newY };
-            
-            setPlayer(prev => ({
-                ...prev,
-                position: newPosition,
-                direction
-            }));
-
-            sendMessage('/app/player-action', {
-                type: 'PLAYER_UPDATE',
-                playerId,
-                position: newPosition,
-                direction
-            });
-        }
-    };
-
-    const shootBullet = () => {
-        const bullet = {
-            id: `${playerId}-${Date.now()}`,
-            x: player.position.x,
-            y: player.position.y,
-            direction: player.direction,
-            playerId
-        };
-
-        setBullets(prev => [...prev, bullet]);
-        sendMessage('/app/player-action', {
-            type: 'BULLET_UPDATE',
-            playerId,
-            bullet
-        });
-    };
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setBullets(prevBullets =>
-                prevBullets
-                    .map(bullet => {
-                        let { x, y, direction } = bullet;
-                        
-                        switch (direction) {
-                            case 'up': y -= 1; break;
-                            case 'down': y += 1; break;
-                            case 'left': x -= 1; break;
-                            case 'right': x += 1; break;
-                            default: break;
-                        }
-
-                        if (collisionUtils.checkCollision({ x, y }) || 
-                            x < 0 || x >= mapDataLocal[0].length || 
-                            y < 0 || y >= mapDataLocal.length) {
-                            return null;
-                        }
-
-                        return { ...bullet, x, y };
-                    })
-                    .filter(Boolean)
-            );
-        }, 100);
-
-        return () => clearInterval(interval);
-    }, []);
-
-    usePlayerInput(handlePlayerAction);
+    });
 
     return (
-        <div>
-            {Object.values(allPlayers).map(playerData => (
-                <Player
-                    key={playerData.id}
-                    id={playerData.id}
-                    position={playerData.position}
-                    direction={playerData.direction}
-                    isCurrentPlayer={playerData.id === playerId}
-                />
-            ))}
-            {bullets.map(bullet => (
-                <Bullet
-                    key={bullet.id}
-                    x={bullet.x}
-                    y={bullet.y}
-                    direction={bullet.direction}
-                />
+        <div className="game-container">
+            {Object.values(gameState.players).map(player => (
+                <React.Fragment key={player.id}>
+                    <Player 
+                        {...player} 
+                        isCurrentPlayer={player.id === playerId} 
+                    />
+                    <BulletController
+                        ref={bulletControllerRef}
+                        playerId={player.id}
+                        stompClient={stompClient}
+                        playerPosition={player.position}
+                        playerDirection={player.direction}
+                        isCurrentPlayer={player.id === playerId}
+                        mapData={mapData}
+                    />
+                </React.Fragment>
             ))}
         </div>
     );

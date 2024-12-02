@@ -1,27 +1,28 @@
+
+import { useMsal } from "@azure/msal-react";
 import React, { useState } from 'react';
 import './App.css';
 import GameBoard from './components/GameBoard/GameBoard';
 import StartScreen from './components/StartScreen/StartScreen';
 import TankColorSelector from './components/TankColorSelector/TankColorSelector';
 import WaitingRoom from './components/WaitingRoom/WaitingRoom';
-import { useMsal } from "@azure/msal-react";
-import { InteractionType } from "@azure/msal-browser";
 
 function App() {
     const { instance, accounts } = useMsal();
     const [currentScreen, setCurrentScreen] = useState('start');
     const [tankColor, setTankColor] = useState(null);
     const [playerName, setPlayerName] = useState('');
+    const [gamePlayers, setGamePlayers] = useState([]); // Nuevo estado para los jugadores
 
     const login = () => {
         instance.loginPopup({
-          scopes: ["user.read"],
+            scopes: ["user.read"],
         }).catch((error) => console.error(error));
-      };
-    
-      const logout = () => {
+    };
+
+    const logout = () => {
         instance.logoutPopup();
-      };
+    };
 
     const handleStart = () => {
         setCurrentScreen('colorSelection');
@@ -38,7 +39,14 @@ function App() {
         setCurrentScreen('waitingRoom');
     };
 
-    const handleStartGame = () => {
+    const handleStartGame = (playersOrPlayer) => {
+        console.log('Iniciando juego:', playersOrPlayer);
+    
+        const players = Array.isArray(playersOrPlayer)
+            ? playersOrPlayer
+            : [playersOrPlayer];
+    
+        setGamePlayers(players);
         setCurrentScreen('gameBoard');
     };
 
@@ -49,9 +57,20 @@ function App() {
             case 'colorSelection':
                 return <TankColorSelector onColorSelect={handleColorSelect} />;
             case 'waitingRoom':
-                return <WaitingRoom onJoin={handleJoin} playerName={playerName} onStartGame={handleStartGame} />;
+                return (
+                    <WaitingRoom
+                        onJoin={handleJoin}
+                        playerName={playerName}
+                        onStartGame={handleStartGame}
+                    />
+                );
             case 'gameBoard':
-                return <GameBoard tankColor={tankColor} playerName={playerName} />;
+                return (
+                    <GameBoard
+                        tankColor={tankColor}
+                        playersData={gamePlayers} // Pasamos los jugadores guardados
+                    />
+                );
             default:
                 return <StartScreen onStart={handleStart} />;
         }
@@ -62,13 +81,16 @@ function App() {
             <h1>Battle City Remake</h1>
             {accounts.length > 0 ? (
                 <div>
-                {renderScreen()}
-                <button onClick={logout}>Logout</button>
+                    {renderScreen()}
+                    <button onClick={logout} className="auth-button">
+                        Logout
+                    </button>
                 </div>
-            ) : ( 
-                <button onClick={login}>Login</button>
-            )
-            }
+            ) : (
+                <button onClick={login} className="auth-button">
+                    Login
+                </button>
+            )}
         </div>
     );
 }

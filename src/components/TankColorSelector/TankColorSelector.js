@@ -6,7 +6,7 @@ const TankColorSelector = ({ onColorSelect }) => {
     { name: 'Morado', code: '#800080' },
     { name: 'Verde', code: '#006400' },
     { name: 'Azul', code: '#00008B' },
-    { name: 'Amarillo', code: '#B8860B' }
+    { name: 'Amarillo', code: '#B8860B' },
   ];
 
   return (
