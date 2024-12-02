@@ -1,21 +1,23 @@
 import { Client } from '@stomp/stompjs';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import SockJS from 'sockjs-client';
 import Player from '../components/Player/Player';
+import BulletController from './BulletController';
 import usePlayerInput from '../hooks/usePlayerInput';
 import CollisionUtils from '../utils/collisionUtils';
 
-const MOVEMENT_SPEED = 0.1;
+const MOVEMENT_SPEED = 0.01;
 
 export default function PlayerController({ playerId, playerName, initialPosition, mapData }) {
-   const [gameState, setGameState] = useState({
-       players: {
-           [playerId]: { id: playerId, name: playerName, position: initialPosition, direction: 'down' }
-       },
-   });
-   const [stompClient, setStompClient] = useState(null);
-   const [isConnected, setIsConnected] = useState(false);
-   const collisionUtils = new CollisionUtils(mapData);
+    const [gameState, setGameState] = useState({
+        players: {
+            [playerId]: { id: playerId, name: playerName, position: initialPosition, direction: 'down' }
+        },
+    });
+    const [stompClient, setStompClient] = useState(null);
+    const [isConnected, setIsConnected] = useState(false);
+    const collisionUtils = new CollisionUtils(mapData);
+    const bulletControllerRef = useRef(null);
 
    const handleGameUpdate = useCallback((message) => {
        if (!message || !message.body) return;
@@ -153,19 +155,37 @@ export default function PlayerController({ playerId, playerName, initialPosition
        }
    }, [playerId, stompClient, isConnected, gameState.players, collisionUtils]);
 
-   usePlayerInput(action => {
-       if (action.type === 'MOVE') movePlayer(action.direction);
-   });
+    // Modificar el handler de input
+    usePlayerInput(action => {
+        switch(action.type) {
+            case 'MOVE':
+                movePlayer(action.direction);
+                break;
+            case 'SHOOT':
+                bulletControllerRef.current?.shoot();
+                break;
+        }
+    });
 
-   return (
-       <div className="game-container">
-           {Object.values(gameState.players).map(player => (
-               <Player 
-                   key={player.id} 
-                   {...player} 
-                   isCurrentPlayer={player.id === playerId} 
-               />
-           ))}
-       </div>
-   );
+    return (
+        <div className="game-container">
+            {Object.values(gameState.players).map(player => (
+                <React.Fragment key={player.id}>
+                    <Player 
+                        {...player} 
+                        isCurrentPlayer={player.id === playerId} 
+                    />
+                    <BulletController
+                        ref={bulletControllerRef}
+                        playerId={player.id}
+                        stompClient={stompClient}
+                        playerPosition={player.position}
+                        playerDirection={player.direction}
+                        isCurrentPlayer={player.id === playerId}
+                        mapData={mapData}
+                    />
+                </React.Fragment>
+            ))}
+        </div>
+    );
 }
