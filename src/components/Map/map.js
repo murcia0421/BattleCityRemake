@@ -1,3 +1,4 @@
+
 import './Map.css';
 import React from 'react';
 import wallBrickImage from '../../assets/images/map/wall_brick.png';

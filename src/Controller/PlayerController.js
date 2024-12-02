@@ -1,142 +1,171 @@
 import { Client } from '@stomp/stompjs';
 import React, { useCallback, useEffect, useState } from 'react';
 import SockJS from 'sockjs-client';
-import Player from '../components/Player/Player'; // Asegúrate de tener este componente
-import usePlayerInput from '../hooks/usePlayerInput'; // Asegúrate de que funcione correctamente
-import CollisionUtils from '../utils/collisionUtils'; // Para verificar colisiones
+import Player from '../components/Player/Player';
+import usePlayerInput from '../hooks/usePlayerInput';
+import CollisionUtils from '../utils/collisionUtils';
 
 const MOVEMENT_SPEED = 0.1;
 
 export default function PlayerController({ playerId, playerName, initialPosition, mapData }) {
-    const [gameState, setGameState] = useState({
-        players: {
-            [playerId]: { id: playerId, name: playerName, position: initialPosition, direction: 'down' }
-        },
-    });
-    const [stompClient, setStompClient] = useState(null);
-    const [isConnected, setIsConnected] = useState(false);
-    const collisionUtils = new CollisionUtils(mapData);
+   const [gameState, setGameState] = useState({
+       players: {
+           [playerId]: { id: playerId, name: playerName, position: initialPosition, direction: 'down' }
+       },
+   });
+   const [stompClient, setStompClient] = useState(null);
+   const [isConnected, setIsConnected] = useState(false);
+   const collisionUtils = new CollisionUtils(mapData);
 
-    // Manejar actualizaciones de mensajes del servidor
-    const handleGameUpdate = useCallback((message) => {
-        if (!message || !message.body) return;
+   const handleGameUpdate = useCallback((message) => {
+       if (!message || !message.body) return;
 
-        try {
-            const update = JSON.parse(message.body);
-            switch (update.type) {
-                case 'PLAYER_MOVE':
-                    setGameState(prev => ({
-                        ...prev,
-                        players: {
-                            ...prev.players,
-                            [update.playerId]: {
-                                ...prev.players[update.playerId],
-                                position: update.position,
-                                direction: update.direction,
-                            }
-                        }
-                    }));
-                    break;
-                case 'PLAYER_JOIN':
-                    setGameState(prev => ({
-                        ...prev,
-                        players: {
-                            ...prev.players,
-                            [update.player.id]: update.player,
-                        }
-                    }));
-                    break;
-                default:
-                    console.log('Mensaje desconocido:', update);
-            }
-        } catch (error) {
-            console.error('Error procesando mensaje:', error);
-        }
-    }, []);
+       try {
+           const update = JSON.parse(message.body);
+           console.log('Actualización recibida:', update);
 
-    useEffect(() => {
-        const socket = new SockJS('http://localhost:8080/ws');
-        const client = new Client({
-            webSocketFactory: () => socket,
-            reconnectDelay: 5000,
-            debug: str => console.log('STOMP Debug:', str),
-        });
+           switch (update.type) {
+               case 'PLAYER_MOVE':
+                   // Solo actualizamos si el movimiento es de otro jugador
+                   if (update.playerId !== playerId) {
+                       setGameState(prev => ({
+                           ...prev,
+                           players: {
+                               ...prev.players,
+                               [update.playerId]: {
+                                   ...prev.players[update.playerId],
+                                   position: update.position,
+                                   direction: update.direction,
+                               }
+                           }
+                       }));
+                   }
+                   break;
+               case 'PLAYER_JOIN':
+                   console.log('Jugador uniéndose:', update.player);
+                   setGameState(prev => ({
+                       ...prev,
+                       players: {
+                           ...prev.players,
+                           [update.player.id]: update.player,
+                       }
+                   }));
+                   break;
+               default:
+                   console.log('Mensaje no manejado:', update);
+           }
+       } catch (error) {
+           console.error('Error procesando mensaje:', error);
+       }
+   }, [playerId]);
 
-        client.onConnect = () => {
-            console.log('Conectado al servidor');
-            setIsConnected(true);
-            setStompClient(client);
+   useEffect(() => {
+       const socket = new SockJS('http://localhost:8080/ws');
+       const client = new Client({
+           webSocketFactory: () => socket,
+           reconnectDelay: 5000,
+           debug: str => console.log('STOMP Debug:', str),
+       });
 
-            client.subscribe('/topic/game-updates', handleGameUpdate);
+       client.onConnect = () => {
+           console.log('Conectado al servidor');
+           setIsConnected(true);
+           setStompClient(client);
 
-            client.publish({
-                destination: '/app/game-join',
-                body: JSON.stringify({
-                    type: 'PLAYER_JOIN',
-                    player: { id: playerId, name: playerName, position: initialPosition, direction: 'down' }
-                })
-            });
-        };
+           client.subscribe('/topic/game-updates', handleGameUpdate);
 
-        client.onDisconnect = () => setIsConnected(false);
-        client.onStompError = (error) => console.error('Error STOMP:', error);
+           client.publish({
+               destination: '/app/game-join',
+               body: JSON.stringify({
+                   type: 'PLAYER_JOIN',
+                   player: { 
+                       id: playerId, 
+                       name: playerName, 
+                       position: initialPosition, 
+                       direction: 'down' 
+                   }
+               })
+           });
+       };
 
-        client.activate();
+       client.onDisconnect = () => {
+           console.log('Desconectado del servidor');
+           setIsConnected(false);
+       };
+       
+       client.onStompError = (error) => console.error('Error STOMP:', error);
 
-        return () => {
-            if (client.connected) client.deactivate();
-        };
-    }, [playerId, playerName, initialPosition, handleGameUpdate]);
+       client.activate();
 
-    const movePlayer = useCallback((direction) => {
-        const currentPlayer = gameState.players[playerId];
-        let newX = currentPlayer.position.x;
-        let newY = currentPlayer.position.y;
+       return () => {
+           if (client.connected) client.deactivate();
+       };
+   }, [playerId, playerName, initialPosition, handleGameUpdate]);
 
-        switch (direction) {
-            case 'up': newY -= MOVEMENT_SPEED; break;
-            case 'down': newY += MOVEMENT_SPEED; break;
-            case 'left': newX -= MOVEMENT_SPEED; break;
-            case 'right': newX += MOVEMENT_SPEED; break;
-        }
+   const movePlayer = useCallback((direction) => {
+       if (!stompClient?.connected || !isConnected) {
+           console.log('No hay conexión, no se puede mover');
+           return;
+       }
 
-        if (!collisionUtils.checkCollision({ x: Math.floor(newX), y: Math.floor(newY) })) {
-            const newPosition = { x: newX, y: newY };
+       const currentPlayer = gameState.players[playerId];
+       if (!currentPlayer) {
+           console.log('Jugador no encontrado');
+           return;
+       }
 
-            stompClient.publish({
-                destination: '/app/game-move',
-                body: JSON.stringify({
-                    type: 'PLAYER_MOVE',
-                    playerId,
-                    position: newPosition,
-                    direction,
-                })
-            });
+       let newX = currentPlayer.position.x;
+       let newY = currentPlayer.position.y;
 
-            setGameState(prev => ({
-                ...prev,
-                players: {
-                    ...prev.players,
-                    [playerId]: {
-                        ...currentPlayer,
-                        position: newPosition,
-                        direction,
-                    }
-                }
-            }));
-        }
-    }, [playerId, stompClient, gameState.players, collisionUtils]);
+       switch (direction) {
+           case 'up': newY -= MOVEMENT_SPEED; break;
+           case 'down': newY += MOVEMENT_SPEED; break;
+           case 'left': newX -= MOVEMENT_SPEED; break;
+           case 'right': newX += MOVEMENT_SPEED; break;
+       }
 
-    // Hook para capturar entrada del jugador
-    usePlayerInput(action => {
-        if (action.type === 'MOVE') movePlayer(action.direction);
-    });
+       if (!collisionUtils.checkCollision({ x: Math.floor(newX), y: Math.floor(newY) })) {
+           const newPosition = { x: newX, y: newY };
 
-    return (
-        <div className="game-container">
-            {Object.values(gameState.players).map(player => (
-                <Player key={player.id} {...player} isCurrentPlayer={player.id === playerId} />
-            ))}
-        </div>
-    );
+           // Primero actualizamos nuestro estado local
+           setGameState(prev => ({
+               ...prev,
+               players: {
+                   ...prev.players,
+                   [playerId]: {
+                       ...currentPlayer,
+                       position: newPosition,
+                       direction,
+                   }
+               }
+           }));
+
+           // Luego enviamos el movimiento al servidor
+           stompClient.publish({
+               destination: '/app/game-move',
+               body: JSON.stringify({
+                   type: 'PLAYER_MOVE',
+                   playerId,
+                   position: newPosition,
+                   direction,
+               })
+           });
+       }
+   }, [playerId, stompClient, isConnected, gameState.players, collisionUtils]);
+
+   usePlayerInput(action => {
+       if (action.type === 'MOVE') movePlayer(action.direction);
+   });
+
+   return (
+       <div className="game-container">
+           {Object.values(gameState.players).map(player => (
+               <Player 
+                   key={player.id} 
+                   {...player} 
+                   isCurrentPlayer={player.id === playerId} 
+               />
+           ))}
+       </div>
+   );
 }

@@ -12,100 +12,75 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
    const [playerNameInput, setPlayerNameInput] = useState('');
 
    useEffect(() => {
-       const connectToWebSocket = () => {
-           try {
-               const socket = new SockJS('http://localhost:8080/ws');
-               const client = new Client({
-                   webSocketFactory: () => socket,
-                   reconnectDelay: 5000,
-                   debug: (str) => {
-                       console.log('STOMP Debug:', str);
-                   },
-                   onConnect: () => {
-                       console.log('Conectado al servidor');
-                       setConnectionStatus('connected');
+       const socket = new SockJS('http://localhost:8080/ws');
+       const client = new Client({
+           webSocketFactory: () => socket,
+           reconnectDelay: 5000,
+           debug: (str) => console.log('STOMP Debug:', str),
+           onConnect: () => {
+               console.log('Conectado al servidor');
+               setConnectionStatus('connected');
+               
+               client.subscribe('/topic/players', (message) => {
+                   try {
+                       const data = JSON.parse(message.body);
+                       console.log('Datos recibidos:', data);
                        
-                       client.subscribe('/topic/players', (message) => {
-                           console.log('Mensaje recibido del servidor:', message.body);
-                           try {
-                               const data = JSON.parse(message.body);
-                               
-                               if (Array.isArray(data)) {
-                                   setPlayers(data);
-                                   // Verificar si ya estamos en la lista
-                                   const myPlayer = data.find(p => p.name === playerNameInput);
-                                   if (myPlayer) {
-                                       setMyPlayerId(myPlayer.id);
-                                       setHasJoined(true);
-                                   }
-                                   return;
-                               }
-
-                               setPlayers(current => {
-                                   if (current.length >= 4) return current;
-
-                                   const existingPlayerIndex = current.findIndex(p => p.id === data.id);
-                                   if (existingPlayerIndex !== -1) {
-                                       const newPlayers = [...current];
-                                       newPlayers[existingPlayerIndex] = data;
-                                       return newPlayers;
-                                   }
-
-                                   return [...current, data];
-                               });
-
-                               // Si este es nuestro jugador
-                               if (data.name === playerNameInput) {
-                                   setMyPlayerId(data.id);
-                                   setHasJoined(true);
-                               }
-                           } catch (e) {
-                               console.error('Error al procesar mensaje:', e);
+                       if (Array.isArray(data)) {
+                           // Lista completa de jugadores
+                           const foundPlayer = data.find(p => p.name === playerNameInput);
+                           if (foundPlayer) {
+                               setMyPlayerId(foundPlayer.id);
+                               setHasJoined(true);
                            }
-                       });
+                           setPlayers(data);
+                       } else {
+                           // Jugador individual
+                           setPlayers(current => {
+                               const existingPlayerIndex = current.findIndex(p => p.id === data.id);
+                               if (existingPlayerIndex !== -1) {
+                                   const newPlayers = [...current];
+                                   newPlayers[existingPlayerIndex] = data;
+                                   return newPlayers;
+                               }
+                               return [...current, data];
+                           });
 
-                       // Solicitar lista actual de jugadores
-                       client.publish({
-                           destination: '/app/request-players'
-                       });
-                   },
-                   onStompError: (frame) => {
-                       console.error('Error en STOMP:', frame.headers['message']);
-                       setConnectionStatus('error');
-                   },
-                   onDisconnect: () => {
-                       console.log('Desconectado del servidor');
-                       setConnectionStatus('disconnected');
-                       setHasJoined(false);
-                       setMyPlayerId(null);
+                           if (data.name === playerNameInput) {
+                               setMyPlayerId(data.id);
+                               setHasJoined(true);
+                           }
+                       }
+                   } catch (e) {
+                       console.error('Error al procesar mensaje:', e);
                    }
                });
 
-               client.activate();
-               setStompClient(client);
-
-               return client;
-           } catch (error) {
-               console.error('Error al conectar:', error);
+               client.publish({
+                   destination: '/app/request-players'
+               });
+           },
+           onStompError: (frame) => {
+               console.error('Error en STOMP:', frame.headers['message']);
                setConnectionStatus('error');
+           },
+           onDisconnect: () => {
+               console.log('Desconectado del servidor');
+               setConnectionStatus('disconnected');
+               setHasJoined(false);
+               setMyPlayerId(null);
            }
-       };
+       });
 
-       const client = connectToWebSocket();
+       client.activate();
+       setStompClient(client);
 
        return () => {
-           if (client && client.connected) {
-               try {
-                   client.publish({
-                       destination: '/app/player-leave',
-                       body: JSON.stringify({ id: myPlayerId })
-                   });
-               } finally {
-                   client.deactivate();
-               }
+           if (client.connected) {
+               client.deactivate();
            }
        };
-   }, [myPlayerId, playerNameInput]);
+   }, [playerNameInput]);
 
    const addPlayer = () => {
        if (!playerNameInput.trim()) {
@@ -123,7 +98,7 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
            return;
        }
 
-       if (!stompClient || !stompClient.connected) {
+       if (!stompClient?.connected) {
            alert('No hay conexión con el servidor');
            return;
        }
@@ -134,10 +109,13 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
        }
 
        const playerData = {
+           id: `Jugador ${players.length + 1}`,
            name: playerNameInput.trim(),
            position: null,
            direction: "down"
        };
+
+       console.log('Enviando jugador:', playerData);
 
        try {
            stompClient.publish({
@@ -145,26 +123,56 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
                body: JSON.stringify(playerData)
            });
        } catch (error) {
-           console.error('Error al enviar mensaje:', error);
-           alert('Error al unirse a la sala');
+           console.error('Error al enviar jugador:', error);
        }
    };
 
    const startGame = () => {
-       if (players.length < 2) {
-           alert('Se necesitan al menos 2 jugadores');
-           return;
-       }
+    console.log('Estado actual:', {
+        players,
+        myPlayerId,
+        hasJoined,
+    });
 
-       // Asignar posiciones a los jugadores
-       const playersWithPositions = players.map((player, index) => ({
-           ...player,
-           position: index === 0 ? { x: 1, y: 1 } : { x: 2, y: 9 }
-       }));
+    if (players.length < 2) {
+        alert('Se necesitan al menos 2 jugadores');
+        return;
+    }
 
-       // Llamar a onStartGame con los jugadores y sus posiciones
-       onStartGame(playersWithPositions);
-   };
+    // Encuentra al jugador actual
+    const myPlayer = players.find(player => player.id === myPlayerId);
+    console.log('Lista de jugadores:', players);
+    console.log('Mi ID de jugador:', myPlayerId);
+    console.log('Jugador encontrado:', myPlayer);
+
+    if (!myPlayer) {
+        console.error('No se encontró al jugador actual en la lista');
+        return;
+    }
+
+    // Asignar posición única basada en el índice del jugador
+    const myIndex = players.indexOf(myPlayer);
+    const predefinedPositions = [
+        { x: 1, y: 1 },
+        { x: 2, y: 9 },
+        { x: 5, y: 5 },
+        { x: 8, y: 3 }, // Posiciones adicionales si hay más jugadores
+    ];
+    const myPosition =
+        predefinedPositions[myIndex] || { x: 0, y: 0 }; // Posición por defecto si excede las predefinidas
+
+    // Actualizar solo mi jugador
+    const myUpdatedPlayer = {
+        ...myPlayer,
+        position: myPosition,
+    };
+
+    console.log('Iniciando juego con mi jugador:', myUpdatedPlayer);
+
+    // Llamar a onStartGame solo con la información del jugador actual
+    onStartGame(myUpdatedPlayer);
+};
+
 
    return (
        <div className="waiting-room-container">

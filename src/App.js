@@ -1,3 +1,4 @@
+
 import { useMsal } from "@azure/msal-react";
 import React, { useState } from 'react';
 import './App.css';
@@ -38,9 +39,14 @@ function App() {
         setCurrentScreen('waitingRoom');
     };
 
-    const handleStartGame = (players) => {
-        console.log('Iniciando juego con jugadores:', players);
-        setGamePlayers(players); // Guardamos los jugadores
+    const handleStartGame = (playersOrPlayer) => {
+        console.log('Iniciando juego:', playersOrPlayer);
+    
+        const players = Array.isArray(playersOrPlayer)
+            ? playersOrPlayer
+            : [playersOrPlayer];
+    
+        setGamePlayers(players);
         setCurrentScreen('gameBoard');
     };
 
