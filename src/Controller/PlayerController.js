@@ -6,7 +6,8 @@ import BulletController from './BulletController';
 import usePlayerInput from '../hooks/usePlayerInput';
 import CollisionUtils from '../utils/collisionUtils';
 
-const MOVEMENT_SPEED = 0.01;
+const TILE_SIZE = 1; // Cada celda es 1 unidad
+const MOVEMENT_SPEED = 0.1;
 
 export default function PlayerController({ playerId, playerName, initialPosition, mapData }) {
     const [gameState, setGameState] = useState({
@@ -105,55 +106,95 @@ export default function PlayerController({ playerId, playerName, initialPosition
    }, [playerId, playerName, initialPosition, handleGameUpdate]);
 
    const movePlayer = useCallback((direction) => {
-       if (!stompClient?.connected || !isConnected) {
-           console.log('No hay conexión, no se puede mover');
-           return;
-       }
+    if (!stompClient?.connected || !isConnected) {
+        console.log('No hay conexión, no se puede mover');
+        return;
+    }
 
-       const currentPlayer = gameState.players[playerId];
-       if (!currentPlayer) {
-           console.log('Jugador no encontrado');
-           return;
-       }
+    const currentPlayer = gameState.players[playerId];
+    if (!currentPlayer) {
+        console.log('Jugador no encontrado');
+        return;
+    }
 
-       let newX = currentPlayer.position.x;
-       let newY = currentPlayer.position.y;
+    // Calcular la próxima posición
+    let newX = currentPlayer.position.x;
+    let newY = currentPlayer.position.y;
+    
+    switch (direction) {
+        case 'up': newY -= MOVEMENT_SPEED; break;
+        case 'down': newY += MOVEMENT_SPEED; break;
+        case 'left': newX -= MOVEMENT_SPEED; break;
+        case 'right': newX += MOVEMENT_SPEED; break;
+    }
 
-       switch (direction) {
-           case 'up': newY -= MOVEMENT_SPEED; break;
-           case 'down': newY += MOVEMENT_SPEED; break;
-           case 'left': newX -= MOVEMENT_SPEED; break;
-           case 'right': newX += MOVEMENT_SPEED; break;
-       }
+    // Verificar colisiones en las cuatro esquinas del tanque
+    const corners = [
+        { x: Math.floor(newX), y: Math.floor(newY) },                 // Esquina superior izquierda
+        { x: Math.floor(newX + 0.8), y: Math.floor(newY) },          // Esquina superior derecha
+        { x: Math.floor(newX), y: Math.floor(newY + 0.8) },          // Esquina inferior izquierda
+        { x: Math.floor(newX + 0.8), y: Math.floor(newY + 0.8) }     // Esquina inferior derecha
+    ];
 
-       if (!collisionUtils.checkCollision({ x: Math.floor(newX), y: Math.floor(newY) })) {
-           const newPosition = { x: newX, y: newY };
+    // Verificar si alguna esquina colisiona
+    const hasCollision = corners.some(corner => {
+        // Verificar límites del mapa
+        if (corner.x < 0 || corner.x >= mapData[0].length || 
+            corner.y < 0 || corner.y >= mapData.length) {
+            return true;
+        }
+        // Verificar colisión con paredes
+        return collisionUtils.checkCollision(corner);
+    });
 
-           // Primero actualizamos nuestro estado local
-           setGameState(prev => ({
-               ...prev,
-               players: {
-                   ...prev.players,
-                   [playerId]: {
-                       ...currentPlayer,
-                       position: newPosition,
-                       direction,
-                   }
-               }
-           }));
+    if (!hasCollision) {
+        const newPosition = { x: newX, y: newY };
 
-           // Luego enviamos el movimiento al servidor
-           stompClient.publish({
-               destination: '/app/game-move',
-               body: JSON.stringify({
-                   type: 'PLAYER_MOVE',
-                   playerId,
-                   position: newPosition,
-                   direction,
-               })
-           });
-       }
-   }, [playerId, stompClient, isConnected, gameState.players, collisionUtils]);
+        setGameState(prev => ({
+            ...prev,
+            players: {
+                ...prev.players,
+                [playerId]: {
+                    ...currentPlayer,
+                    position: newPosition,
+                    direction,
+                }
+            }
+        }));
+
+        stompClient.publish({
+            destination: '/app/game-move',
+            body: JSON.stringify({
+                type: 'PLAYER_MOVE',
+                playerId,
+                position: newPosition,
+                direction,
+            })
+        });
+    } else {
+        // Si hay colisión, solo actualizar la dirección
+        setGameState(prev => ({
+            ...prev,
+            players: {
+                ...prev.players,
+                [playerId]: {
+                    ...currentPlayer,
+                    direction,
+                }
+            }
+        }));
+
+        stompClient.publish({
+            destination: '/app/game-move',
+            body: JSON.stringify({
+                type: 'PLAYER_MOVE',
+                playerId,
+                position: currentPlayer.position,
+                direction,
+            })
+        });
+    }
+}, [playerId, stompClient, isConnected, gameState.players, collisionUtils, mapData]);
 
     // Modificar el handler de input
     usePlayerInput(action => {
