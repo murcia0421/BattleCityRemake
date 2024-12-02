@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import './TankColorSelector.css';
 
@@ -28,6 +29,10 @@ const TankColorSelector = ({ onColorSelect }) => {
       </div>
     </div>
   );
+};
+
+TankColorSelector.propTypes = {
+  onColorSelect: PropTypes.func.isRequired,
 };
 
 export default TankColorSelector;
