@@ -4,6 +4,37 @@ import Bullet from '../components/Bullets/Bullet';
 
 const BULLET_SPEED = 0.15;
 
+const updateBulletPosition = (bullet, mapData) => {
+    let { x, y, direction } = bullet;
+    
+    switch (direction) {
+        case 'up': y -= BULLET_SPEED; break;
+        case 'down': y += BULLET_SPEED; break;
+        case 'left': x -= BULLET_SPEED; break;
+        case 'right': x += BULLET_SPEED; break;
+        default: break;
+    }
+
+    if (x < 0 || x >= mapData[0].length || 
+        y < 0 || y >= mapData.length || 
+        mapData[Math.floor(y)][Math.floor(x)] !== 0) {
+        return null;
+    }
+
+    return { ...bullet, x, y };
+};
+
+const publishBulletUpdate = (stompClient, playerId, bullets) => {
+    stompClient.publish({
+        destination: '/app/bullet-update',
+        body: JSON.stringify({
+            type: 'BULLET_UPDATE',
+            playerId,
+            bullets
+        })
+    });
+};
+
 const BulletController = forwardRef(({ 
     playerId, 
     stompClient, 
@@ -20,11 +51,9 @@ const BulletController = forwardRef(({
             
             switch(update.type) {
                 case 'BULLET_FIRED':
-                    console.log('Nueva bala disparada:', update.bullet);
                     setBullets(prev => [...prev, update.bullet]);
                     break;
                 case 'BULLET_UPDATE':
-                    console.log('Actualización de balas:', update.bullets);
                     setBullets(update.bullets);
                     break;
             }
@@ -35,32 +64,15 @@ const BulletController = forwardRef(({
 
     useEffect(() => {
         if (!stompClient?.connected) return;
-
-        const subscription = stompClient.subscribe(
-            '/topic/game-updates',
-            handleGameUpdate
-        );
-
+        const subscription = stompClient.subscribe('/topic/game-updates', handleGameUpdate);
         return () => subscription.unsubscribe();
     }, [stompClient, handleGameUpdate]);
 
     const shoot = useCallback(() => {
-        if (!isCurrentPlayer || !stompClient?.connected) {
-            console.log('No se puede disparar:', { isCurrentPlayer, isConnected: stompClient?.connected });
-            return;
-        }
+        if (!isCurrentPlayer || !stompClient?.connected) return;
 
-        console.log('Disparando desde posición:', playerPosition, 'en dirección:', playerDirection);
-
-        let bulletX = playerPosition.x;
-        let bulletY = playerPosition.y;
-        
-        switch (playerDirection) {
-            case 'up': bulletY -= 0.5; break;
-            case 'down': bulletY += 0.5; break;
-            case 'left': bulletX -= 0.5; break;
-            case 'right': bulletX += 0.5; break;
-        }
+        const bulletX = playerPosition.x + (playerDirection === 'left' ? -0.5 : playerDirection === 'right' ? 0.5 : 0);
+        const bulletY = playerPosition.y + (playerDirection === 'up' ? -0.5 : playerDirection === 'down' ? 0.5 : 0);
 
         const newBullet = {
             id: `${playerId}-${Date.now()}`,
@@ -80,45 +92,17 @@ const BulletController = forwardRef(({
         });
     }, [isCurrentPlayer, stompClient, playerId, playerPosition, playerDirection]);
 
-    // Exponer la función shoot al PlayerController
-    useImperativeHandle(ref, () => ({
-        shoot
-    }), [shoot]);
+    useImperativeHandle(ref, () => ({ shoot }), [shoot]);
 
     useEffect(() => {
         const interval = setInterval(() => {
             setBullets(prevBullets => {
                 const updatedBullets = prevBullets
-                    .map(bullet => {
-                        let { x, y, direction } = bullet;
-                        
-                        switch (direction) {
-                            case 'up': y -= BULLET_SPEED; break;
-                            case 'down': y += BULLET_SPEED; break;
-                            case 'left': x -= BULLET_SPEED; break;
-                            case 'right': x += BULLET_SPEED; break;
-                            default: break;
-                        }
-
-                        if (x < 0 || x >= mapData[0].length || 
-                            y < 0 || y >= mapData.length || 
-                            mapData[Math.floor(y)][Math.floor(x)] !== 0) {
-                            return null;
-                        }
-
-                        return { ...bullet, x, y };
-                    })
+                    .map(bullet => updateBulletPosition(bullet, mapData))
                     .filter(Boolean);
 
                 if (isCurrentPlayer && updatedBullets.length !== prevBullets.length) {
-                    stompClient.publish({
-                        destination: '/app/bullet-update',
-                        body: JSON.stringify({
-                            type: 'BULLET_UPDATE',
-                            playerId,
-                            bullets: updatedBullets
-                        })
-                    });
+                    publishBulletUpdate(stompClient, playerId, updatedBullets);
                 }
 
                 return updatedBullets;
