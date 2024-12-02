@@ -94,18 +94,24 @@ const BulletController = forwardRef(({
 
     useImperativeHandle(ref, () => ({ shoot }), [shoot]);
 
+    const updateBulletsPositions = (prevBullets) => {
+        return prevBullets
+            .map(bullet => updateBulletPosition(bullet, mapData))
+            .filter(Boolean);
+    };
+
+    const handleBulletUpdate = (updatedBullets, prevBullets) => {
+        if (isCurrentPlayer && updatedBullets.length !== prevBullets.length) {
+            publishBulletUpdate(stompClient, playerId, updatedBullets);
+        }
+        return updatedBullets;
+    };
+
     useEffect(() => {
         const interval = setInterval(() => {
             setBullets(prevBullets => {
-                const updatedBullets = prevBullets
-                    .map(bullet => updateBulletPosition(bullet, mapData))
-                    .filter(Boolean);
-
-                if (isCurrentPlayer && updatedBullets.length !== prevBullets.length) {
-                    publishBulletUpdate(stompClient, playerId, updatedBullets);
-                }
-
-                return updatedBullets;
+                const updatedBullets = updateBulletsPositions(prevBullets);
+                return handleBulletUpdate(updatedBullets, prevBullets);
             });
         }, 16);
 
