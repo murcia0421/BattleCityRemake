@@ -71,8 +71,20 @@ const BulletController = forwardRef(({
     const shoot = useCallback(() => {
         if (!isCurrentPlayer || !stompClient?.connected) return;
 
-        const bulletX = playerPosition.x + (playerDirection === 'left' ? -0.5 : playerDirection === 'right' ? 0.5 : 0);
-        const bulletY = playerPosition.y + (playerDirection === 'up' ? -0.5 : playerDirection === 'down' ? 0.5 : 0);
+        // Refactorizado para evitar ternarios anidados
+        let bulletX = playerPosition.x;
+        if (playerDirection === 'left') {
+            bulletX -= 0.5;
+        } else if (playerDirection === 'right') {
+            bulletX += 0.5;
+        }
+
+        let bulletY = playerPosition.y;
+        if (playerDirection === 'up') {
+            bulletY -= 0.5;
+        } else if (playerDirection === 'down') {
+            bulletY += 0.5;
+        }
 
         const newBullet = {
             id: `${playerId}-${Date.now()}`,
@@ -114,7 +126,6 @@ const BulletController = forwardRef(({
                 return handleBulletUpdate(updatedBullets, prevBullets);
             });
         }, 16);
-
         return () => clearInterval(interval);
     }, [mapData, stompClient, playerId, isCurrentPlayer]);
 
