@@ -1,12 +1,10 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
-import CollisionUtils from '../../utils/collisionUtils';
 import Map from '../Map/map';
 import mapData from '../Map/MapData';
 
 const GameBoard = ({ tankColor, playersData }) => {
   const [players, setPlayers] = useState(playersData || []); 
-  const collisionUtils = new CollisionUtils(mapData);
 
   useEffect(() => {
     // Actualizar jugadores cuando cambian en las props
