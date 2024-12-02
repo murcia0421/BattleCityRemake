@@ -1,5 +1,6 @@
-
 import React from 'react';
+import baseImage from '../../assets/images/map/base.png';
+import treeImage from '../../assets/images/map/trees.png';
 import wallBrickImage from '../../assets/images/map/wall_brick.png';
 import wallSteelImage from '../../assets/images/map/wall_steel.png';
 import PlayerController from '../../Controller/PlayerController';
