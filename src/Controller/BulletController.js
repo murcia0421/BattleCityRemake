@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
+import PropTypes from 'prop-types';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import Bullet from '../components/Bullets/Bullet';
 
 const BULLET_SPEED = 0.15;
@@ -140,5 +141,17 @@ const BulletController = forwardRef(({
         </>
     );
 });
+
+BulletController.propTypes = {
+    playerId: PropTypes.string.isRequired,
+    stompClient: PropTypes.object.isRequired,
+    playerPosition: PropTypes.shape({
+        x: PropTypes.number.isRequired,
+        y: PropTypes.number.isRequired
+    }).isRequired,
+    playerDirection: PropTypes.oneOf(['up', 'down', 'left', 'right']).isRequired,
+    isCurrentPlayer: PropTypes.bool.isRequired,
+    mapData: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.number)).isRequired
+};
 
 export default BulletController;
