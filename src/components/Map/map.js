@@ -17,7 +17,6 @@ const getTileImage = (tile) => {
 };
 
 const Map = ({ players, tankColor, mapData }) => {
-  // Ya no necesitamos manejar el playerId aquí porque viene de la sala de espera
   console.log('Jugadores recibidos en Map:', players);
 
   return (

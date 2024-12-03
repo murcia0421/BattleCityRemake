@@ -1,3 +1,4 @@
+// src/controllers/PlayerController.js
 import { Client } from '@stomp/stompjs';
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -7,13 +8,12 @@ import usePlayerInput from '../hooks/usePlayerInput';
 import CollisionUtils from '../utils/collisionUtils';
 import BulletController from './BulletController';
 
-const TILE_SIZE = 1;
 const MOVEMENT_SPEED = 0.1;
 
-function PlayerController({ playerId, playerName, initialPosition, mapData }) {
+function PlayerController({ playerId, playerName, initialPosition, mapData, tankColor }) {
     const [gameState, setGameState] = useState({
         players: {
-            [playerId]: { id: playerId, name: playerName, position: initialPosition, direction: 'down' }
+            [playerId]: { id: playerId, name: playerName, position: initialPosition, direction: 'down', tankColor: 'Azul' }
         },
     });
     const [stompClient, setStompClient] = useState(null);
@@ -21,11 +21,13 @@ function PlayerController({ playerId, playerName, initialPosition, mapData }) {
     const collisionUtils = new CollisionUtils(mapData);
     const bulletControllerRef = useRef(null);
 
+    // Maneja las actualizaciones del juego
     const handleGameUpdate = useCallback((message) => {
         if (!message?.body) return;
         try {
             const update = JSON.parse(message.body);
             console.log('Actualización recibida:', update);
+    
             switch (update.type) {
                 case 'PLAYER_MOVE':
                     if (update.playerId !== playerId) {
@@ -37,6 +39,7 @@ function PlayerController({ playerId, playerName, initialPosition, mapData }) {
                                     ...prev.players[update.playerId],
                                     position: update.position,
                                     direction: update.direction,
+                                    tankColor: update.player?.tankColor || 'Azul', // Verificación de null o undefined
                                 }
                             }
                         }));
@@ -48,7 +51,10 @@ function PlayerController({ playerId, playerName, initialPosition, mapData }) {
                         ...prev,
                         players: {
                             ...prev.players,
-                            [update.player.id]: update.player,
+                            [update.player.id]: {
+                                ...update.player,
+                                tankColor: update.player?.tankColor || 'Azul', // Verificación de null o undefined
+                            },
                         }
                     }));
                     break;
@@ -59,7 +65,11 @@ function PlayerController({ playerId, playerName, initialPosition, mapData }) {
             console.error('Error procesando mensaje:', error);
         }
     }, [playerId]);
+    
+    
+    
 
+    // Conexión al servidor y suscripción al canal de actualizaciones de juego
     useEffect(() => {
         const socket = new SockJS('http://localhost:8080/ws');
         const client = new Client({
@@ -67,11 +77,18 @@ function PlayerController({ playerId, playerName, initialPosition, mapData }) {
             reconnectDelay: 5000,
             debug: str => console.log('STOMP Debug:', str),
         });
+
+        // Cuando la conexión esté establecida
         client.onConnect = () => {
             console.log('Conectado al servidor');
             setIsConnected(true);
             setStompClient(client);
+
+            // Se suscribe al canal de actualizaciones de juego
             client.subscribe('/topic/game-updates', handleGameUpdate);
+
+            // Enviar el color del tanque al backend
+            console.log('Enviando color de tanque al backend:', tankColor);
             client.publish({
                 destination: '/app/game-join',
                 body: JSON.stringify({
@@ -80,23 +97,32 @@ function PlayerController({ playerId, playerName, initialPosition, mapData }) {
                         id: playerId, 
                         name: playerName, 
                         position: initialPosition, 
-                        direction: 'down' 
+                        direction: 'down',
+                        tankColor: tankColor // Aquí se envía el color del tanque
                     }
                 })
             });
         };
+
+        // Manejo de desconexión
         client.onDisconnect = () => {
             console.log('Desconectado del servidor');
             setIsConnected(false);
         };
-        
+
+        // Manejo de errores de STOMP
         client.onStompError = (error) => console.error('Error STOMP:', error);
+
+        // Activar cliente
         client.activate();
+
+        // Limpiar la conexión cuando el componente se desmonte
         return () => {
             if (client.connected) client.deactivate();
         };
-    }, [playerId, playerName, initialPosition, handleGameUpdate]);
+    }, [playerId, playerName, initialPosition, tankColor, handleGameUpdate]);
 
+    // Lógica de movimiento del jugador
     const movePlayer = useCallback((direction) => {
         if (!stompClient?.connected || !isConnected) {
             console.log('No hay conexión, no se puede mover');
@@ -174,6 +200,7 @@ function PlayerController({ playerId, playerName, initialPosition, mapData }) {
         }
     }, [playerId, stompClient, isConnected, gameState.players, collisionUtils, mapData]);
 
+    // Uso de hook de entrada de jugador
     usePlayerInput(action => {
         switch(action.type) {
             case 'MOVE':
@@ -192,9 +219,11 @@ function PlayerController({ playerId, playerName, initialPosition, mapData }) {
                     <Player 
                         {...player} 
                         isCurrentPlayer={player.id === playerId} 
-                    />
+                        tankColor={player.tankColor || 'Azul'} // Se pasa tankColor aquí para cada jugador
+                    />  
                     <BulletController
                         ref={bulletControllerRef}
+
                         playerId={player.id}
                         stompClient={stompClient}
                         playerPosition={player.position}
@@ -215,7 +244,8 @@ PlayerController.propTypes = {
         x: PropTypes.number.isRequired,
         y: PropTypes.number.isRequired,
     }).isRequired,
-    mapData: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.number)).isRequired
+    mapData: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.number)).isRequired,
+    tankColor: PropTypes.oneOf(['Azul', 'Verde', 'Morado', 'Amarillo']).isRequired,
 };
 
 export default PlayerController;

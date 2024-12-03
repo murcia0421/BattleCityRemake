@@ -1,13 +1,14 @@
+// src/components/TankColorSelector/TankColorSelector.js
 import PropTypes from 'prop-types';
 import React from 'react';
 import './TankColorSelector.css';
 
 const TankColorSelector = ({ onColorSelect }) => {
   const colors = [
-    { name: 'Morado', code: '#800080' },
-    { name: 'Verde', code: '#006400' },
-    { name: 'Azul', code: '#00008B' },
-    { name: 'Amarillo', code: '#B8860B' },
+    { name: 'Morado' },
+    { name: 'Verde' },
+    { name: 'Azul' },
+    { name: 'Amarillo' },
   ];
 
   return (
@@ -18,9 +19,9 @@ const TankColorSelector = ({ onColorSelect }) => {
           {colors.map((color) => (
             <button
               key={color.name}
-              onClick={() => onColorSelect(color.name)}
-              style={{ backgroundColor: color.code, color: '#fff' }}
+              onClick={() => onColorSelect(color.name)} // Pasar solo el nombre del color
               className="color-button"
+              aria-label={`Seleccionar color ${color.name}`}
             >
               {color.name}
             </button>
