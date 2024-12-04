@@ -112,7 +112,10 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
            id: `Jugador ${players.length + 1}`,
            name: playerNameInput.trim(),
            position: null,
-           direction: "down"
+           direction: "down",
+           lives: 3,          // Añadir información completa
+           isAlive: true,     // Añadir información completa
+           tankColor: null    // Se asignará después
        };
 
        console.log('Enviando jugador:', playerData);

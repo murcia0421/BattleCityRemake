@@ -53,35 +53,54 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
            console.log("Players para si son nulos" ,gameState.players);
    
            switch (update.type) {
-               case 'PLAYER_MOVE':
-                   if (update.playerId !== playerId) {
-                       setGameState(prev => ({
-                           ...prev,
-                           players: {
-                               ...prev.players,
-                               [update.playerId]: {
-                                   ...prev.players[update.playerId],
-                                   position: update.position,
-                                   direction: update.direction,
-                                   tankColor: update.tankColor
-                               }
-                           }
-                       }));
-                   }
-                   break;
-               case 'PLAYER_JOIN':
-                   console.log('Jugador uniéndose:', update.player);
-                   setGameState(prev => ({
-                       ...prev,
-                       players: {
-                           ...prev.players,
-                           [update.player.id]: {
-                               ...update.player,
-                               tankColor: update.player.tankColor
-                           }
-                       }
-                   }));
-                   break;
+            case 'PLAYER_MOVE':
+                if (update.playerId !== playerId) {
+                    setGameState(prev => {
+                        const updatedPlayer = {
+                            ...prev.players[update.playerId],
+                            id: update.playerId,  // Asegurar que el ID se mantiene
+                            position: update.position,
+                            direction: update.direction,
+                            tankColor: update.tankColor,
+                            lives: prev.players[update.playerId]?.lives || 3,
+                            isAlive: prev.players[update.playerId]?.isAlive !== undefined ? 
+                                prev.players[update.playerId].isAlive : true,
+                            name: prev.players[update.playerId]?.name || update.playerId
+                        };
+            
+                        return {
+                            ...prev,
+                            players: {
+                                ...prev.players,
+                                [update.playerId]: updatedPlayer
+                            }
+                        };
+                    });
+                }
+                break;
+            
+            case 'PLAYER_JOIN':
+                console.log('Jugador uniéndose:', update.player);
+                setGameState(prev => {
+                    const newPlayer = {
+                        id: update.player.id,  // El ID debe mantenerse
+                        name: update.player.name,
+                        position: update.player.position,
+                        direction: update.player.direction,
+                        tankColor: update.player.tankColor,
+                        lives: update.player.lives || 3,
+                        isAlive: update.player.isAlive !== undefined ? update.player.isAlive : true
+                    };
+            
+                    return {
+                        ...prev,
+                        players: {
+                            ...prev.players,
+                            [newPlayer.id]: newPlayer  // Usar el ID para la clave
+                        }
+                    };
+                });
+                break;
                 
                case 'PLAYER_HIT':
                    if (update.playerId === playerId) {
@@ -227,15 +246,18 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
            }));
 
            stompClient.publish({
-               destination: '/app/game-move',
-               body: JSON.stringify({
-                   type: 'PLAYER_MOVE',
-                   playerId,
-                   position: newPosition,
-                   direction,
-                   tankColor: currentPlayer.tankColor
-               })
-           });
+            destination: '/app/game-move',
+            body: JSON.stringify({
+                type: 'PLAYER_MOVE',
+                playerId: currentPlayer.id,  // Asegurar que enviamos el ID correcto
+                position: newPosition,
+                direction,
+                tankColor: currentPlayer.tankColor,
+                lives: currentPlayer.lives,
+                isAlive: currentPlayer.isAlive,
+                name: currentPlayer.name
+            })
+        });
        } else {
            setGameState(prev => ({
                ...prev,
