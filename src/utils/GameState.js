@@ -1,5 +1,6 @@
 
 export class GameState {
+    
     constructor() {
         this.players = new Map();
         this.bullets = new Map();
