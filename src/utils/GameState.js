@@ -63,6 +63,12 @@ export class GameState {
             { x: 1, y: 23 },
             { x: 24, y: 23 }
         ];
-        return spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
-    }
+    
+        // Use crypto.getRandomValues for a cryptographically secure random index
+        const randomValues = new Uint32Array(1);
+        window.crypto.getRandomValues(randomValues);
+        const randomIndex = randomValues[0] % spawnPoints.length;
+    
+        return spawnPoints[randomIndex];
+    }    
 }
