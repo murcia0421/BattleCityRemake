@@ -9,13 +9,23 @@ import tankPurple from '../../assets/images/tankpurple.png';
 
 const TILE_SIZE = 32;
 
-const Player = ({ position, direction, tankColor }) => {
+const Player = ({ position, direction, tankColor, lives, isAlive }) => {
   const tankImages = useMemo(() => ({
     'Azul': tankBlue,
     'Verde': tankGreen,
     'Morado': tankPurple,
     'Amarillo': tankYellow,
   }), []);
+
+  // Generar array de corazones basado en vidas
+  //Si esto funciona  va a quedar muy cute
+  const heartsDisplay = useMemo(() => 
+    Array(lives).fill('❤️')
+  , [lives]);
+
+  // Si el jugador no está vivo, no renderizar nada
+  //estoy muy seguro que esto va a explotar
+  if (!isAlive) return null;
 
   const currentTankImage = tankImages[tankColor] || tankImages['Amarillo'];
 
@@ -33,10 +43,16 @@ const Player = ({ position, direction, tankColor }) => {
     top: `${position.y * TILE_SIZE}px`,
     position: 'absolute',
     transform: `rotate(${getRotation(direction)}deg)`,
+    opacity: lives < 3 ? 0.8 : 1, // Reducir opacidad cuando está dañado
   };
 
   return (
-    <div className="player" style={playerStyle}>
+    <div className={`player ${lives < 3 ? 'damaged' : ''}`} style={playerStyle}>
+      {/* Indicador de vidas sobre el tanque */}
+      <div className="lives-indicator">
+        {heartsDisplay}
+      </div>
+      
       <img 
         src={currentTankImage} 
         alt={`Tank ${tankColor}`} 
@@ -52,7 +68,18 @@ Player.propTypes = {
     y: PropTypes.number.isRequired,
   }).isRequired,
   direction: PropTypes.oneOf(['up', 'right', 'down', 'left']).isRequired, 
-  tankColor: PropTypes.oneOf(['Azul', 'Verde', 'Morado', 'Amarillo']).isRequired, 
+  tankColor: PropTypes.oneOf(['Azul', 'Verde', 'Morado', 'Amarillo']).isRequired,
+  // Nuevos PropTypes
+  //eliminar si explota
+  lives: PropTypes.number.isRequired,
+  isAlive: PropTypes.bool.isRequired,
+};
+
+// Valores por defecto para las nuevas props
+//Igual esto 
+Player.defaultProps = {
+  lives: 3,
+  isAlive: true
 };
 
 export default React.memo(Player);

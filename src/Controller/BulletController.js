@@ -4,8 +4,73 @@ import Bullet from '../components/Bullets/Bullet';
 
 const BULLET_SPEED = 0.15;
 
-const updateBulletPosition = (bullet, mapData) => {
+const publishBulletUpdate = (stompClient, playerId, bullets) => {
+    stompClient.publish({
+        destination: '/app/bullet-update',
+        body: JSON.stringify({
+            type: 'BULLET_UPDATE',
+            playerId,
+            bullets
+        })
+    });
+};
+
+//Verificar si el bullet impacta con un jugador-distinto al actual 
+//si me tiro todo borro esto 
+const checkPlayerCollision = (bullet, players = {}) => {
+    // No verificar colisiones con el jugador que disparó
+    console.log("Posición de la bala:", { x: bullet.x, y: bullet.y });
+    console.log("Todos los jugadores:", players); // Añadir este log
+    
+    return Object.values(players).find(player => {
+
+        if (!player.id) {
+            console.log("Jugador sin ID:", player);
+            return false;
+        }
+
+        console.log('Revisando colisión con jugador:', {
+            playerId: player.id,
+            playerPos: player.position,
+            bulletPlayerId: bullet.playerId,
+            isShooter: player.id === bullet.playerId, 
+            bulletPos: { x: bullet.x, y: bullet.y },
+            hitbox: {
+                minX: player.position.x - 0.4,
+                maxX: player.position.x + 0.4,
+                minY: player.position.y - 0.4,
+                maxY: player.position.y + 0.4
+            }
+        });
+
+        if (player.id === bullet.playerId || !player.isAlive) return false;
+
+        // Crear hitbox correcto alrededor del centro del tanque
+        const playerBox = {
+            minX: player.position.x - 0.4, // 0.4 unidades a la izquierda
+            maxX: player.position.x + 0.4, // 0.4 unidades a la derecha
+            minY: player.position.y - 0.4, // 0.4 unidades arriba
+            maxY: player.position.y + 0.4  // 0.4 unidades abajo
+        };
+
+        console.log('Hitbox calculado:', playerBox);
+
+        const isCollision = bullet.x > playerBox.minX && 
+                          bullet.x < playerBox.maxX && 
+                          bullet.y > playerBox.minY && 
+                          bullet.y < playerBox.maxY;
+
+        if (isCollision) {
+            console.log('¡COLISIÓN DETECTADA con jugador:', player.id);
+        }
+
+        return isCollision;
+    });
+};
+
+const updateBulletPosition = (bullet, mapData, players = {}, stompClient) => {
     let { x, y, direction } = bullet;
+    console.log("ver que tiene players", players);
     
     switch (direction) {
         case 'up': y -= BULLET_SPEED; break;
@@ -21,18 +86,25 @@ const updateBulletPosition = (bullet, mapData) => {
         return null;
     }
 
-    return { ...bullet, x, y };
-};
+    // Verificar colisión bala-jugador
+    //y esto 
+    const hitPlayer = checkPlayerCollision({ ...bullet, x, y }, players);
+    console.log("xxx: ", hitPlayer)
+    if (hitPlayer) {
+        // Notificar hit al servidor 
+        stompClient?.publish({
+            destination: '/app/player-hit',
+            body: JSON.stringify({
+                type: 'PLAYER_HIT',
+                playerId: hitPlayer.id,
+                bulletId: bullet.id,
+                shooterId: bullet.playerId
+            })
+        });
+        return null;
+    }
 
-const publishBulletUpdate = (stompClient, playerId, bullets) => {
-    stompClient.publish({
-        destination: '/app/bullet-update',
-        body: JSON.stringify({
-            type: 'BULLET_UPDATE',
-            playerId,
-            bullets
-        })
-    });
+    return { ...bullet, x, y };
 };
 
 const BulletController = forwardRef(({ 
@@ -41,8 +113,10 @@ const BulletController = forwardRef(({
     playerPosition, 
     playerDirection,
     isCurrentPlayer,
-    mapData 
+    mapData,
+    players = {}
 }, ref) => {
+    //console.log('Players en BulletController:', players);
     const [bullets, setBullets] = useState([]);
 
     const handleGameUpdate = useCallback((message) => {
@@ -108,7 +182,7 @@ const BulletController = forwardRef(({
 
     const updateBulletsPositions = (prevBullets) => {
         return prevBullets
-            .map(bullet => updateBulletPosition(bullet, mapData))
+            .map(bullet => updateBulletPosition(bullet, mapData, players, stompClient))
             .filter(Boolean);
     };
 
@@ -127,7 +201,7 @@ const BulletController = forwardRef(({
             });
         }, 16);
         return () => clearInterval(interval);
-    }, [mapData, stompClient, playerId, isCurrentPlayer]);
+    }, [mapData, stompClient, playerId, isCurrentPlayer, players]);
 
     return (
         <>
@@ -152,7 +226,18 @@ BulletController.propTypes = {
     }).isRequired,
     playerDirection: PropTypes.oneOf(['up', 'down', 'left', 'right']).isRequired,
     isCurrentPlayer: PropTypes.bool.isRequired,
-    mapData: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.number)).isRequired
+    mapData: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.number)).isRequired,
+    // Nuevo prop para PvP
+    //y estos props
+    players: PropTypes.objectOf(PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        position: PropTypes.shape({
+            x: PropTypes.number.isRequired,
+            y: PropTypes.number.isRequired
+        }).isRequired,
+        lives: PropTypes.number.isRequired,
+        isAlive: PropTypes.bool.isRequired
+    })).isRequired
 };
 
 export default BulletController;
