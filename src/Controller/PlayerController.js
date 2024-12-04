@@ -203,7 +203,7 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
        if (!stompClient?.connected || !isConnected) return;
        
        const currentPlayer = gameState.players[playerId];
-       if (!currentPlayer || !currentPlayer.isAlive) return;
+       if (!stompClient?.connected || !isConnected) return;
        
        let newX = currentPlayer.position.x;
        let newY = currentPlayer.position.y;
