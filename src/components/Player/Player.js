@@ -67,19 +67,16 @@ Player.propTypes = {
     x: PropTypes.number.isRequired,
     y: PropTypes.number.isRequired,
   }).isRequired,
-  direction: PropTypes.oneOf(['up', 'right', 'down', 'left']).isRequired, 
+  direction: PropTypes.oneOf(['up', 'right', 'down', 'left']).isRequired,
   tankColor: PropTypes.oneOf(['Azul', 'Verde', 'Morado', 'Amarillo']).isRequired,
-  // Nuevos PropTypes
-  //eliminar si explota
-  lives: PropTypes.number.isRequired,
+  lives: PropTypes.number, 
   isAlive: PropTypes.bool.isRequired,
 };
 
-// Valores por defecto para las nuevas props
-//Igual esto 
 Player.defaultProps = {
-  lives: 3,
-  isAlive: true
+  lives: 3,  // Default value for lives
+  isAlive: true,
 };
+
 
 export default React.memo(Player);
