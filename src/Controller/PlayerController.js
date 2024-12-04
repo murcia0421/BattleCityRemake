@@ -6,7 +6,6 @@ import Player from '../components/Player/Player';
 import usePlayerInput from '../hooks/usePlayerInput';
 import CollisionUtils from '../utils/collisionUtils';
 import BulletController from './BulletController';
-
 const MOVEMENT_SPEED = 0.1;
 
 function PlayerController({ playerId, playerName, initialPosition, mapData, tankColor }) {
