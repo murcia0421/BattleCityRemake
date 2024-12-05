@@ -25,61 +25,43 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
    });
    const [stompClient, setStompClient] = useState(null);
    const [isConnected, setIsConnected] = useState(false);
-   // Estado para manejar respawn
-   const [respawnTimer, setRespawnTimer] = useState(null);
    const collisionUtils = new CollisionUtils(mapData);
    const bulletControllerRef = useRef(null);
-
-   // Función para manejar respawn
-   
-   const handleRespawn = useCallback(() => {
-       if (!stompClient?.connected) return;
-
-       stompClient.publish({
-           destination: '/app/player-respawn',
-           body: JSON.stringify({
-               type: 'PLAYER_RESPAWN',
-               playerId
-           })
-       });
-   }, [stompClient, playerId]); 
 
    const handleGameUpdate = useCallback((message) => {
        if (!message?.body) return;
        try {
            const update = JSON.parse(message.body);
-           console.log('Actualización recibida:', update);
-           console.log("Players para si son nulos" ,gameState.players);
    
            switch (update.type) {
             case 'PLAYER_MOVE':
-                if (update.playerId !== playerId) {
-                    setGameState(prev => {
-                        const updatedPlayer = {
-                            ...prev.players[update.playerId],
-                            id: update.playerId,  // Asegurar que el ID se mantiene
-                            position: update.position,
-                            direction: update.direction,
-                            tankColor: update.tankColor,
-                            lives: prev.players[update.playerId]?.lives || 3,
-                            isAlive: prev.players[update.playerId]?.isAlive !== undefined ? 
-                                prev.players[update.playerId].isAlive : true,
-                            name: prev.players[update.playerId]?.name || update.playerId
-                        };
-            
-                        return {
-                            ...prev,
-                            players: {
-                                ...prev.players,
-                                [update.playerId]: updatedPlayer
-                            }
-                        };
-                    });
-                }
+                    console.log(`Jugador ${update.playerId} se movió:`, update.position, gameState.players, update.lives
+                        ,update.isAlive
+                    );
+                    if (update.playerId !== playerId) {
+                        setGameState(prev => {
+                            const updatedPlayer = {
+                                id: update.playerId,
+                                position: update.position,
+                                direction: update.direction,
+                                tankColor: update.tankColor,
+                                lives: update.lives,         // Usar los valores que vienen en el mensaje
+                                isAlive: update.isAlive,     // No mezclar con prev.players
+                                name: update.name
+                            };
+
+                            return {
+                                ...prev,
+                                players: {
+                                    ...prev.players,
+                                    [update.playerId]: updatedPlayer
+                                }
+                            };
+                        });
+                    }
                 break;
-            
             case 'PLAYER_JOIN':
-                console.log('Jugador uniéndose:', update.player);
+                console.log(`Jugador ${update.player.id} se unió al juego`);
                 setGameState(prev => {
                     const newPlayer = {
                         id: update.player.id,  // El ID debe mantenerse
@@ -102,6 +84,7 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
                 break;
                 
                case 'PLAYER_HIT':
+                console.log(`Jugador ${update.playerId} recibió daño. Vidas restantes: ${update.lives}`);
                    if (update.playerId === playerId) {
                        setGameState(prev => ({
                            ...prev,
@@ -116,6 +99,7 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
                    }
                    break;
                case 'PLAYER_ELIMINATED':
+                console.log(`Jugador ${update.playerId} fue eliminado`);
                    if (update.playerId === playerId) {
                        setGameState(prev => ({
                            ...prev,
@@ -128,24 +112,9 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
                                }
                            }
                        }));
-                       setRespawnTimer(setTimeout(handleRespawn, 5000));
                    }
                    break;
-               case 'PLAYER_RESPAWN':
-                   if (update.playerId === playerId) {
-                       setGameState(prev => ({
-                           ...prev,
-                           players: {
-                               ...prev.players,
-                               [playerId]: {
-                                   ...prev.players[playerId],
-                                   lives: update.lives,
-                                   isAlive: true
-                               }
-                           }
-                       }));
-                   }
-                   break;
+
            }
        } catch (error) {
            console.error('Error procesando mensaje:', error);
@@ -195,60 +164,61 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
 
        return () => {
            if (client.connected) client.deactivate();
-           if (respawnTimer) clearTimeout(respawnTimer);
        };
    }, [playerId, playerName, initialPosition, tankColor, handleGameUpdate]);
 
    const movePlayer = useCallback((direction) => {
-       if (!stompClient?.connected || !isConnected) return;
-       
-       const currentPlayer = gameState.players[playerId];
-       if (!stompClient?.connected || !isConnected) return;
-       
-       let newX = currentPlayer.position.x;
-       let newY = currentPlayer.position.y;
-       
-       switch (direction) {
-           case 'up': newY -= MOVEMENT_SPEED; break;
-           case 'down': newY += MOVEMENT_SPEED; break;
-           case 'left': newX -= MOVEMENT_SPEED; break;
-           case 'right': newX += MOVEMENT_SPEED; break;
-       }
+    if (!stompClient?.connected || !isConnected) return;
+    
+    const currentPlayer = gameState.players[playerId];
+    if (!currentPlayer || !currentPlayer.isAlive) return;
+    
+    let newX = currentPlayer.position.x;
+    let newY = currentPlayer.position.y;
+    let newPosition = { x: newX, y: newY }; // Definir aquí inicialmente
+    
+    switch (direction) {
+        case 'up': newPosition.y -= MOVEMENT_SPEED; break;
+        case 'down': newPosition.y += MOVEMENT_SPEED; break;
+        case 'left': newPosition.x -= MOVEMENT_SPEED; break;
+        case 'right': newPosition.x += MOVEMENT_SPEED; break;
+    }
 
-       const corners = [
-           { x: Math.floor(newX), y: Math.floor(newY) },
-           { x: Math.floor(newX + 0.8), y: Math.floor(newY) },
-           { x: Math.floor(newX), y: Math.floor(newY + 0.8) },
-           { x: Math.floor(newX + 0.8), y: Math.floor(newY + 0.8) }
-       ];
+    const corners = [
+        { x: Math.floor(newPosition.x), y: Math.floor(newPosition.y) },
+        { x: Math.floor(newPosition.x + 0.8), y: Math.floor(newPosition.y) },
+        { x: Math.floor(newPosition.x), y: Math.floor(newPosition.y + 0.8) },
+        { x: Math.floor(newPosition.x + 0.8), y: Math.floor(newPosition.y + 0.8) }
+    ];
 
-       const hasCollision = corners.some(corner => {
-           if (corner.x < 0 || corner.x >= mapData[0].length || 
-               corner.y < 0 || corner.y >= mapData.length) {
-               return true;
-           }
-           return collisionUtils.checkCollision(corner);
-       });
+    const hasCollision = corners.some(corner => {
+        if (corner.x < 0 || corner.x >= mapData[0].length || 
+            corner.y < 0 || corner.y >= mapData.length) {
+            return true;
+        }
+        return collisionUtils.checkCollision(corner);
+    });
 
-       if (!hasCollision) {
-           const newPosition = { x: newX, y: newY };
-           setGameState(prev => ({
-               ...prev,
-               players: {
-                   ...prev.players,
-                   [playerId]: {
-                       ...currentPlayer,
-                       position: newPosition,
-                       direction,
-                   }
-               }
-           }));
+    if (!hasCollision) {
+        console.log(`Mi movimiento - ID: ${playerId}, Posición:`, newPosition);
+        
+        setGameState(prev => ({
+            ...prev,
+            players: {
+                ...prev.players,
+                [playerId]: {
+                    ...currentPlayer,
+                    position: newPosition,
+                    direction,
+                }
+            }
+        }));
 
-           stompClient.publish({
+        stompClient.publish({
             destination: '/app/game-move',
             body: JSON.stringify({
                 type: 'PLAYER_MOVE',
-                playerId: currentPlayer.id,  // Asegurar que enviamos el ID correcto
+                playerId: currentPlayer.id,
                 position: newPosition,
                 direction,
                 tankColor: currentPlayer.tankColor,
@@ -257,30 +227,31 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
                 name: currentPlayer.name
             })
         });
-       } else {
-           setGameState(prev => ({
-               ...prev,
-               players: {
-                   ...prev.players,
-                   [playerId]: {
-                       ...currentPlayer,
-                       direction,
-                   }
-               }
-           }));
+    } else {
+        // Solo actualizar dirección si hay colisión
+        setGameState(prev => ({
+            ...prev,
+            players: {
+                ...prev.players,
+                [playerId]: {
+                    ...currentPlayer,
+                    direction,
+                }
+            }
+        }));
 
-           stompClient.publish({
-               destination: '/app/game-move',
-               body: JSON.stringify({
-                   type: 'PLAYER_MOVE',
-                   playerId,
-                   position: currentPlayer.position,
-                   direction,
-                   tankColor: currentPlayer.tankColor
-               })
-           });
-       }
-   }, [playerId, stompClient, isConnected, gameState.players, collisionUtils, mapData]);
+        stompClient.publish({
+            destination: '/app/game-move',
+            body: JSON.stringify({
+                type: 'PLAYER_MOVE',
+                playerId,
+                position: currentPlayer.position,
+                direction,
+                tankColor: currentPlayer.tankColor
+            })
+        });
+    }
+}, [playerId, stompClient, isConnected, gameState.players, collisionUtils, mapData]);
 
    usePlayerInput(action => {
        switch(action.type) {
