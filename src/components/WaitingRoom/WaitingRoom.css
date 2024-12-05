@@ -55,7 +55,6 @@ body {
   color: black;
 }
 
-
 .start-screen button,
 .add-player-button,
 .start-game-button {
@@ -103,7 +102,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Waiting room styles */
 .waiting-room-container {
   display: flex;
   flex-direction: column;
@@ -116,48 +114,117 @@ button:disabled {
 
 .waiting-room-box {
   border: 5px solid #b22222;
-  padding: 20px 30px;
+  padding: 15px 20px;
   border-radius: 10px;
   background-color: rgba(0, 0, 0, 0.8);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
   text-align: center;
-  width: 80%;
-  max-width: 500px;
+  width: 70%;
+  max-width: 450px;
+  margin: 20px auto;
+  overflow-y: auto;
+  max-height: 80vh;
 }
 
 .waiting-room-title {
-  font-size: 24px;
+  font-size: 20px;
   color: #b22222;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
 .waiting-room-subtitle {
-  font-size: 18px;
-  margin-bottom: 10px;
+  font-size: 16px;
+  margin-bottom: 8px;
 }
 
 .player-input-container {
   display: flex;
+  flex-direction: row;
+  align-items: center;
   justify-content: center;
   gap: 10px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .player-input {
-  padding: 10px;
+  padding: 8px;
   border: 2px solid #b22222;
   border-radius: 5px;
   background-color: #000000;
   color: #ffffff;
   font-size: 14px;
-  width: 60%;
+  width: 200px;
+  margin: 0;
 }
 
 .player-input::placeholder {
   color: #aaaaaa;
 }
 
+.color-selector {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+
+.color-button {
+  padding: 8px 12px;
+  border: 3px solid #b22222;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.color-button.selected {
+  border-color: #ffffff;
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.color-button.Azul {
+  background-color: #4a90e2;
+  color: white;
+}
+
+.color-button.Verde {
+  background-color: #50c878;
+  color: white;
+}
+
+.color-button.Morado {
+  background-color: #9b59b6;
+  color: white;
+}
+
+.color-button.Amarillo {
+  background-color: #f1c40f;
+  color: black;
+}
+
+.color-button:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(178, 34, 34, 0.5);
+}
+
+.color-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  border-color: #666666;
+}
+
 .players-list {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
   list-style: none;
   padding: 0;
   margin: 0;
@@ -166,18 +233,52 @@ button:disabled {
 }
 
 .players-list li {
-  margin: 10px 0;
-  padding: 5px;
-  background-color: #444444;
+  padding: 10px;
+  background-color: rgba(68, 68, 68, 0.8);
   border: 2px solid #b22222;
   border-radius: 5px;
-  font-size: 14px;
-  text-align: left;
-  padding-left: 10px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  min-width: 120px;
+}
+
+.color-indicator {
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  margin-left: 10px;
+  border: 2px solid #ffffff;
 }
 
 .connection-status {
   margin-top: 10px;
-  font-size: 14px;
+  font-size: 12px;
   color: #aaaaaa;
+}
+
+@media (max-width: 768px) {
+  .waiting-room-box {
+    width: 85%;
+    padding: 12px;
+    max-height: 85vh;
+  }
+
+  .color-button {
+    font-size: 8px;
+    padding: 6px 12px;
+  }
+
+  .player-input {
+    width: 70%;
+  }
+
+  .waiting-room-title {
+    font-size: 20px;
+  }
+
+  .waiting-room-subtitle {
+    font-size: 14px;
+  }
 }

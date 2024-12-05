@@ -3,13 +3,16 @@ import React, { useEffect, useState } from 'react';
 import SockJS from 'sockjs-client';
 import './WaitingRoom.css';
 
-const WaitingRoom = ({ playerName, onStartGame }) => {
+const TANK_COLORS = ['Azul', 'Verde', 'Morado', 'Amarillo'];
+
+const WaitingRoom = ({ onStartGame }) => {
    const [stompClient, setStompClient] = useState(null);
    const [players, setPlayers] = useState([]);
    const [connectionStatus, setConnectionStatus] = useState('disconnected');
    const [hasJoined, setHasJoined] = useState(false);
    const [myPlayerId, setMyPlayerId] = useState(null);
    const [playerNameInput, setPlayerNameInput] = useState('');
+   const [selectedColor, setSelectedColor] = useState(null);
 
    useEffect(() => {
        const socket = new SockJS('http://localhost:8080/ws');
@@ -27,15 +30,14 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
                        console.log('Datos recibidos:', data);
                        
                        if (Array.isArray(data)) {
-                           // Lista completa de jugadores
                            const foundPlayer = data.find(p => p.name === playerNameInput);
                            if (foundPlayer) {
                                setMyPlayerId(foundPlayer.id);
                                setHasJoined(true);
+                               setSelectedColor(foundPlayer.tankColor);
                            }
                            setPlayers(data);
                        } else {
-                           // Jugador individual
                            setPlayers(current => {
                                const existingPlayerIndex = current.findIndex(p => p.id === data.id);
                                if (existingPlayerIndex !== -1) {
@@ -49,6 +51,7 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
                            if (data.name === playerNameInput) {
                                setMyPlayerId(data.id);
                                setHasJoined(true);
+                               setSelectedColor(data.tankColor);
                            }
                        }
                    } catch (e) {
@@ -69,6 +72,7 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
                setConnectionStatus('disconnected');
                setHasJoined(false);
                setMyPlayerId(null);
+               setSelectedColor(null);
            }
        });
 
@@ -108,14 +112,19 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
            return;
        }
 
+       if (!selectedColor) {
+           alert('Por favor, selecciona un color de tanque');
+           return;
+       }
+
        const playerData = {
            id: `Jugador ${players.length + 1}`,
            name: playerNameInput.trim(),
            position: null,
            direction: "down",
-           lives: 3,          // Añadir información completa
-           isAlive: true,     // Añadir información completa
-           tankColor: null    // Se asignará después
+           lives: 3,
+           isAlive: true,
+           tankColor: selectedColor
        };
 
        console.log('Enviando jugador:', playerData);
@@ -130,52 +139,47 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
        }
    };
 
+   const handleColorSelect = (color) => {
+       if (players.some(player => player.tankColor === color)) {
+           alert('Este color ya está seleccionado');
+           return;
+       }
+       setSelectedColor(color);
+   };
+
    const startGame = () => {
-    console.log('Estado actual:', {
-        players,
-        myPlayerId,
-        hasJoined,
-    });
+       if (players.length < 2) {
+           alert('Se necesitan al menos 2 jugadores');
+           return;
+       }
 
-    if (players.length < 2) {
-        alert('Se necesitan al menos 2 jugadores');
-        return;
-    }
+       const myPlayer = players.find(player => player.id === myPlayerId);
+       console.log('Lista de jugadores:', players);
+       console.log('Mi ID de jugador:', myPlayerId);
+       console.log('Jugador encontrado:', myPlayer);
 
-    // Encuentra al jugador actual
-    const myPlayer = players.find(player => player.id === myPlayerId);
-    console.log('Lista de jugadores:', players);
-    console.log('Mi ID de jugador:', myPlayerId);
-    console.log('Jugador encontrado:', myPlayer);
+       if (!myPlayer) {
+           console.error('No se encontró al jugador actual en la lista');
+           return;
+       }
 
-    if (!myPlayer) {
-        console.error('No se encontró al jugador actual en la lista');
-        return;
-    }
+       const myIndex = players.indexOf(myPlayer);
+       const predefinedPositions = [
+           { x: 1, y: 1 },
+           { x: 2, y: 9 },
+           { x: 5, y: 5 },
+           { x: 8, y: 3 },
+       ];
+       const myPosition = predefinedPositions[myIndex] || { x: 0, y: 0 };
 
-    // Asignar posición única basada en el índice del jugador
-    const myIndex = players.indexOf(myPlayer);
-    const predefinedPositions = [
-        { x: 1, y: 1 },
-        { x: 2, y: 9 },
-        { x: 5, y: 5 },
-        { x: 8, y: 3 }, // Posiciones adicionales si hay más jugadores
-    ];
-    const myPosition =
-        predefinedPositions[myIndex] || { x: 0, y: 0 }; // Posición por defecto si excede las predefinidas
+       const myUpdatedPlayer = {
+           ...myPlayer,
+           position: myPosition,
+       };
 
-    // Actualizar solo mi jugador
-    const myUpdatedPlayer = {
-        ...myPlayer,
-        position: myPosition,
-    };
-
-    console.log('Iniciando juego con mi jugador:', myUpdatedPlayer);
-
-    // Llamar a onStartGame solo con la información del jugador actual
-    onStartGame(myUpdatedPlayer);
-};
-
+       console.log('Iniciando juego con mi jugador:', myUpdatedPlayer);
+       onStartGame(myUpdatedPlayer);
+   };
 
    return (
        <div className="waiting-room-container">
@@ -193,10 +197,27 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
                        className="player-input"
                        disabled={hasJoined}
                    />
+                   
+                   <div className="color-selector">
+                       {TANK_COLORS.map(color => (
+                           <button
+                               key={color}
+                               onClick={() => handleColorSelect(color)}
+                               disabled={hasJoined || players.some(p => p.tankColor === color)}
+                               className={`color-button ${color} ${selectedColor === color ? 'selected' : ''}`}
+                               style={{
+                                   opacity: players.some(p => p.tankColor === color) ? 0.5 : 1
+                               }}
+                           >
+                               {color}
+                           </button>
+                       ))}
+                   </div>
+
                    <button 
                        onClick={addPlayer} 
                        className="add-player-button"
-                       disabled={hasJoined || players.length >= 4}
+                       disabled={hasJoined || players.length >= 4 || !selectedColor}
                    >
                        {hasJoined ? 'Ya unido' : 'Unirse'}
                    </button>
@@ -210,8 +231,11 @@ const WaitingRoom = ({ playerName, onStartGame }) => {
                            <li>No hay jugadores</li>
                        ) : (
                            players.map((player) => (
-                               <li key={player.id}>
-                                   {player.name} {player.id === myPlayerId ? '(Tú)' : ''}
+                               <li key={player.id} className="player-item">
+                                   {player.name} {player.id === myPlayerId ? '(Tú)' : ''} - 
+                                   <span className={`color-indicator ${player.tankColor}`}>
+                                       {player.tankColor}
+                                   </span>
                                </li>
                            ))
                        )}

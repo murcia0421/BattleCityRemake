@@ -16,12 +16,11 @@ const getTileImage = (tile) => {
   }
 };
 
-const Map = ({ players, tankColor, mapData }) => {
+const Map = ({ players, mapData }) => {
   console.log('Jugadores recibidos en Map:', players);
 
   return (
     <div className="Map">
-      {/* Renderizar el mapa base */}
       {mapData.map((row, rowIndex) => (
         <div key={rowIndex} className="map-row">
           {row.map((tile, colIndex) => (
@@ -31,15 +30,14 @@ const Map = ({ players, tankColor, mapData }) => {
           ))}
         </div>
       ))}
-      
-      {/* Renderizar un PlayerController por cada jugador */}
+
       {players?.map((player) => (
         <PlayerController
           key={player.id}
           playerId={player.id}
           playerName={player.name}
           initialPosition={player.position}
-          tankColor={tankColor}
+          tankColor={player.tankColor}
           mapData={mapData}
           allPlayers={players}
         />
