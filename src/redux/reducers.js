@@ -11,7 +11,7 @@ const gameReducer = (state = initialState, action) => {
             game: action.payload,
         };
     }
-s
+
     return state;
 };
 
