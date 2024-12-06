@@ -6,6 +6,7 @@ import Player from '../components/Player/Player';
 import usePlayerInput from '../hooks/usePlayerInput';
 import CollisionUtils from '../utils/collisionUtils';
 import BulletController from './BulletController';
+import GameOverModal from '../components/Winner/GameOverModal';
 
 const MOVEMENT_SPEED = 0.1;
 
@@ -27,86 +28,100 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
    const [isConnected, setIsConnected] = useState(false);
    const collisionUtils = new CollisionUtils(mapData);
    const bulletControllerRef = useRef(null);
+   const [showGameOver, setShowGameOver] = useState(false);
+   const [winner, setWinner] = useState(null);
+
 
    const handleGameUpdate = useCallback((message) => {
-       if (!message?.body) return;
+    if (!message?.body) return;
 
-       try {
-           const update = JSON.parse(message.body);
+    try {
+        const update = JSON.parse(message.body);
 
-           switch (update.type) {
-               case 'PLAYER_MOVE':
-                   if (update.playerId !== playerId) {
-                       setGameState(prev => ({
-                           ...prev,
-                           players: {
-                               ...prev.players,
-                               [update.playerId]: {
-                                   id: update.playerId,
-                                   position: update.position,
-                                   direction: update.direction,
-                                   tankColor: update.tankColor,
-                                   lives: update.lives,
-                                   isAlive: update.isAlive,
-                                   name: update.name
-                               }
-                           }
-                       }));
-                   }
-                   break;
+        switch (update.type) {
+            case 'PLAYER_MOVE':
+                if (update.playerId !== playerId) {
+                    setGameState(prev => ({
+                        ...prev,
+                        players: {
+                            ...prev.players,
+                            [update.playerId]: {
+                                id: update.playerId,
+                                position: update.position,
+                                direction: update.direction,
+                                tankColor: update.tankColor,
+                                lives: update.lives,
+                                isAlive: update.isAlive,
+                                name: update.name
+                            }
+                        }
+                    }));
+                }
+                break;
 
-               case 'PLAYER_JOIN':
-                   setGameState(prev => ({
-                       ...prev,
-                       players: {
-                           ...prev.players,
-                           [update.player.id]: {
-                               id: update.player.id,
-                               name: update.player.name,
-                               position: update.player.position,
-                               direction: update.player.direction,
-                               tankColor: update.player.tankColor,
-                               lives: update.player.lives || 3,
-                               isAlive: update.player.isAlive !== undefined ? update.player.isAlive : true
-                           }
-                       }
-                   }));
-                   break;
+            case 'PLAYER_JOIN':
+                setGameState(prev => ({
+                    ...prev,
+                    players: {
+                        ...prev.players,
+                        [update.player.id]: {
+                            id: update.player.id,
+                            name: update.player.name,
+                            position: update.player.position,
+                            direction: update.player.direction,
+                            tankColor: update.player.tankColor,
+                            lives: update.player.lives || 3,
+                            isAlive: update.player.isAlive !== undefined ? update.player.isAlive : true
+                        }
+                    }
+                }));
+                break;
 
-               case 'PLAYER_HIT':
-                   setGameState(prev => ({
-                       ...prev,
-                       players: {
-                           ...prev.players,
-                           [update.playerId]: {
-                               ...prev.players[update.playerId],
-                               lives: update.lives
-                           }
-                       }
-                   }));
-                   break;
+            case 'PLAYER_HIT':
+                setGameState(prev => ({
+                    ...prev,
+                    players: {
+                        ...prev.players,
+                        [update.playerId]: {
+                            ...prev.players[update.playerId],
+                            lives: update.lives
+                        }
+                    }
+                }));
+                break;
 
-               case 'PLAYER_ELIMINATED':
-                   setGameState(prev => ({
-                       ...prev,
-                       players: {
-                           ...prev.players,
-                           [update.playerId]: {
-                               ...prev.players[update.playerId],
-                               lives: 0,
-                               isAlive: false
-                           }
-                       }
-                   }));
-                   break;
+            case 'PLAYER_ELIMINATED':
+                setGameState(prev => ({
+                    ...prev,
+                    players: {
+                        ...prev.players,
+                        [update.playerId]: {
+                            ...prev.players[update.playerId],
+                            lives: 0,
+                            isAlive: false
+                        }
+                    }
+                }));
+                break;
 
-               default:
-                   console.warn('Mensaje desconocido:', update.type);
-           }
-       } catch (error) {
-           console.error('Error procesando mensaje:', error);
-       }
-   }, [playerId]);
+                case 'GAME_OVER':
+                    setWinner(update.nameWinner);
+                    setShowGameOver(true);
+                    break;
+
+            default:
+                console.warn('Mensaje desconocido:', update.type);
+
+        }
+    } catch (error) {
+        console.error('Error procesando mensaje:', error);
+    }
+}, [playerId]);
+
+const handleRestart = () => {
+     setShowGameOver(false);
+    // aqui se redirige a la pantalla de salas que aun no existe ok ?
+};
 
    useEffect(() => {
        const socket = new SockJS('http://localhost:8080/ws');
@@ -236,32 +251,40 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
    });
 
    return (
-       <div className="game-container">
-           {Object.values(gameState.players).map(player => (
-               <React.Fragment key={player.id}>
-                   <Player 
-                       {...player} 
-                       isCurrentPlayer={player.id === playerId} 
-                       tankColor={player.tankColor}
-                       lives={player.lives}
-                       isAlive={player.isAlive}
-                   />
-                   {player.isAlive && (
-                       <BulletController
-                           ref={bulletControllerRef}
-                           playerId={player.id}
-                           stompClient={stompClient}
-                           playerPosition={player.position}
-                           playerDirection={player.direction}
-                           isCurrentPlayer={player.id === playerId}
-                           mapData={mapData}
-                           players={gameState.players}
-                       />
-                   )}
-               </React.Fragment>
-           ))}
-       </div>
-   );
+    <div className="game-container">
+        {Object.values(gameState.players).map(player => (
+            <React.Fragment key={player.id}>
+                <Player 
+                    {...player} 
+                    isCurrentPlayer={player.id === playerId} 
+                    tankColor={player.tankColor}
+                    lives={player.lives}
+                    isAlive={player.isAlive}
+                />
+                {player.isAlive && (
+                    <BulletController
+                        ref={bulletControllerRef}
+                        playerId={player.id}
+                        stompClient={stompClient}
+                        playerPosition={player.position}
+                        playerDirection={player.direction}
+                        isCurrentPlayer={player.id === playerId}
+                        mapData={mapData}
+                        players={gameState.players}
+                    />
+                )
+                }
+
+                {showGameOver && (
+                    <GameOverModal
+                        winner={winner}
+                        onRestart={handleRestart}
+            />
+        )}
+            </React.Fragment>
+        ))}
+    </div>
+    );
 }
 
 PlayerController.propTypes = {

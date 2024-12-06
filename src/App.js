@@ -2,11 +2,12 @@ import { useMsal } from "@azure/msal-react";
 import React, { useState } from 'react';
 import './App.css';
 import GameBoard from './components/GameBoard/GameBoard';
+import StartScreen from './components/StartScreen/StartScreen'; // Nueva importación
 import WaitingRoom from './components/WaitingRoom/WaitingRoom';
 
 function App() {
     const { instance, accounts } = useMsal();
-    const [currentScreen, setCurrentScreen] = useState('waitingRoom');
+    const [currentScreen, setCurrentScreen] = useState('startScreen'); // Cambiado a 'startScreen'
     const [gamePlayers, setGamePlayers] = useState([]);
 
     const login = () => {
@@ -30,8 +31,14 @@ function App() {
         setCurrentScreen('gameBoard');
     };
 
+    const handleStartScreenComplete = () => {
+        setCurrentScreen('waitingRoom');
+    };
+
     const renderScreen = () => {
         switch (currentScreen) {
+            case 'startScreen':
+                return <StartScreen onStart={handleStartScreenComplete} />;
             case 'waitingRoom':
                 return (
                     <WaitingRoom
@@ -45,7 +52,7 @@ function App() {
                     />
                 );
             default:
-                return <WaitingRoom onStartGame={handleStartGame} />;
+                return <StartScreen onStart={handleStartScreenComplete} />;
         }
     };
 
@@ -68,4 +75,4 @@ function App() {
     );
 }
 
-export default App;
+export default App;  
