@@ -2,6 +2,7 @@ import { Client } from '@stomp/stompjs';
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import SockJS from 'sockjs-client';
+import { getAllPlayers, createPlayer } from "../../api";
 import './WaitingRoom.css';
 
 // Colores de los tanques disponibles
@@ -96,7 +97,7 @@ const WaitingRoom = ({ onStartGame }) => {
         setSelectedColor(null);
     };
 
-    const addPlayer = () => {
+    const addPlayer = async () => {
         if (!playerNameInput.trim()) {
             alert('Por favor, ingresa un nombre');
             return;
@@ -135,6 +136,8 @@ const WaitingRoom = ({ onStartGame }) => {
         console.log('Enviando jugador:', playerData);
 
         try {
+            await createPlayer(playerData);
+            console.log("Jugador creado en la base de datos:", playerData);
             stompClient.publish({
                 destination: '/app/players',
                 body: JSON.stringify(playerData),
