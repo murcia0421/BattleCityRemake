@@ -1,0 +1,59 @@
+name: Build and Deploy Docker Image
+
+on:
+  push:
+    branches:
+      - main  
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Build project with Maven
+      run: mvn clean package
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: cristindavid0124/mi-backend:latest  # Usa tu imagen de Docker Hub
+
+  deploy:
+    runs-on: ubuntu-22.04
+    needs: build-and-push
+
+    steps:
+    - name: Deploy to Azure App Service
+      env:
+        AZURE_WEBAPP_NAME: "BlackJackRoyaleBackend"  # Nombre del App Service en Azure
+        AZURE_RESOURCE_GROUP: "BlackJackRoyaleApp_group"  # Nombre del grupo de recursos en Azure
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      run: |
+        az login --service-principal \
+          --username $AZURE_CLIENT_ID \
+          --password $AZURE_CLIENT_SECRET \
+          --tenant $AZURE_TENANT_ID
+        az webapp config container set \
+          --name $AZURE_WEBAPP_NAME \
+          --resource-group $AZURE_RESOURCE_GROUP \
+          --docker-custom-image-name cristindavid0124/mi-backend:latest \
+          --docker-registry-server-url https://index.docker.io/v1/
