@@ -1,54 +1,61 @@
 import { useEffect, useRef } from 'react';
 
 const usePlayerInput = (onAction) => {
+    // Store the current state of keys being pressed
     const keyStates = useRef({});
+    // Reference for the shooting cooldown
     const shootCooldownRef = useRef(false);
+    // Reference for managing the movement interval
     const movementIntervalRef = useRef(null);
 
     useEffect(() => {
+        // Handles shooting action with cooldown logic
         const handleShoot = () => {
             if (!shootCooldownRef.current) {
                 onAction({ type: 'SHOOT' });
-                // Activar cooldown
                 shootCooldownRef.current = true;
+
+                // Cooldown period of 500ms
                 setTimeout(() => {
                     shootCooldownRef.current = false;
-                }, 500); // Cooldown de 500ms entre disparos
+                }, 500);
             }
         };
 
+        // Handles keydown events for movement and shooting
         const handleKeyDown = (event) => {
-            if (keyStates.current[event.key]) return;
-            
+            if (keyStates.current[event.key]) return; // Avoid duplicate key presses
             keyStates.current[event.key] = true;
-            
+
             switch (event.key) {
-                case ' ':  // Barra espaciadora para disparar
+                case ' ':
+                case 'Enter': // Alternative shooting key
                     event.preventDefault();
                     handleShoot();
                     break;
-                case 'Enter': // Opción alternativa para disparar
-                    event.preventDefault();
-                    handleShoot();
+                default:
                     break;
             }
         };
 
+        // Handles keyup events to reset key states
         const handleKeyUp = (event) => {
             keyStates.current[event.key] = false;
         };
 
-        // Movimiento continuo
+        // Handles continuous movement based on key states
         movementIntervalRef.current = setInterval(() => {
             if (keyStates.current['w']) onAction({ type: 'MOVE', direction: 'up' });
             if (keyStates.current['s']) onAction({ type: 'MOVE', direction: 'down' });
             if (keyStates.current['a']) onAction({ type: 'MOVE', direction: 'left' });
             if (keyStates.current['d']) onAction({ type: 'MOVE', direction: 'right' });
-        }, 16);
+        }, 16); // Approximately 60fps (16ms per frame)
 
+        // Attach event listeners
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
 
+        // Cleanup function
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
@@ -56,7 +63,7 @@ const usePlayerInput = (onAction) => {
                 clearInterval(movementIntervalRef.current);
             }
         };
-    }, [onAction]);
+    }, [onAction]); // Dependency on the `onAction` callback
 
     return null;
 };

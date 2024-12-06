@@ -70,12 +70,11 @@ Player.propTypes = {
   direction: PropTypes.oneOf(['up', 'right', 'down', 'left']).isRequired,
   tankColor: PropTypes.oneOf(['Azul', 'Verde', 'Morado', 'Amarillo']).isRequired,
   lives: PropTypes.number, 
-  isAlive: PropTypes.bool.isRequired,
+  isAlive: PropTypes.bool,
 };
 
 Player.defaultProps = {
-  lives: 3,  // Default value for lives
-  isAlive: true,
+  lives: 3, 
 };
 
 
