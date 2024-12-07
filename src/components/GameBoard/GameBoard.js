@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Map from '../Map/map';
 import mapData from '../Map/MapData';
 
-const GameBoard = ({ playersData }) => {
+const GameBoard = ({ playersData, roomId, onRestart }) => {  // Añadimos roomId aquí
   const [players, setPlayers] = useState(playersData || []);
 
   useEffect(() => {
@@ -18,6 +18,8 @@ const GameBoard = ({ playersData }) => {
       <Map
         players={players}
         mapData={mapData}
+        roomId={roomId}  // Pasamos roomId a Map
+        onRestart={onRestart}
       />
     </div>
   );
@@ -25,6 +27,7 @@ const GameBoard = ({ playersData }) => {
 
 GameBoard.propTypes = {
   playersData: PropTypes.array.isRequired,
+  roomId: PropTypes.string.isRequired,  // Añadimos la validación de prop
 };
 
 export default GameBoard;

@@ -2,13 +2,15 @@ import { useMsal } from "@azure/msal-react";
 import React, { useState } from 'react';
 import './App.css';
 import GameBoard from './components/GameBoard/GameBoard';
-import StartScreen from './components/StartScreen/StartScreen'; // Nueva importación
+import RoomSelector from './components/WaitingRoom/RoomSelector';
+import StartScreen from './components/StartScreen/StartScreen';
 import WaitingRoom from './components/WaitingRoom/WaitingRoom';
 
 function App() {
     const { instance, accounts } = useMsal();
-    const [currentScreen, setCurrentScreen] = useState('startScreen'); // Cambiado a 'startScreen'
+    const [currentScreen, setCurrentScreen] = useState('startScreen');
     const [gamePlayers, setGamePlayers] = useState([]);
+    const [selectedRoom, setSelectedRoom] = useState(null);
 
     const login = () => {
         instance.loginPopup({
@@ -18,6 +20,12 @@ function App() {
 
     const logout = () => {
         instance.logoutPopup();
+    };
+
+    const handleGameRestart = () => {
+        setGamePlayers([]);
+        setSelectedRoom(null);
+        setCurrentScreen('startScreen');
     };
 
     const handleStartGame = (playersOrPlayer) => {
@@ -32,6 +40,11 @@ function App() {
     };
 
     const handleStartScreenComplete = () => {
+        setCurrentScreen('roomSelector');
+    };
+
+    const handleRoomSelect = (roomId) => {
+        setSelectedRoom(roomId);
         setCurrentScreen('waitingRoom');
     };
 
@@ -39,16 +52,21 @@ function App() {
         switch (currentScreen) {
             case 'startScreen':
                 return <StartScreen onStart={handleStartScreenComplete} />;
+            case 'roomSelector':
+                return <RoomSelector onRoomSelect={handleRoomSelect} />;
             case 'waitingRoom':
                 return (
                     <WaitingRoom
                         onStartGame={handleStartGame}
+                        roomId={selectedRoom}
                     />
                 );
             case 'gameBoard':
                 return (
                     <GameBoard
                         playersData={gamePlayers}
+                        roomId={selectedRoom}
+                        onRestart={handleGameRestart}
                     />
                 );
             default:
@@ -75,4 +93,4 @@ function App() {
     );
 }
 
-export default App;  
+export default App;

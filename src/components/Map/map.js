@@ -16,7 +16,7 @@ const getTileImage = (tile) => {
   }
 };
 
-const Map = ({ players, mapData }) => {
+const Map = ({ players, mapData, roomId, onRestart}) => {  
   console.log('Jugadores recibidos en Map:', players);
 
   return (
@@ -40,6 +40,8 @@ const Map = ({ players, mapData }) => {
           tankColor={player.tankColor}
           mapData={mapData}
           allPlayers={players}
+          roomId={roomId}  // Pasamos el roomId al PlayerController
+          onRestart={onRestart} 
         />
       ))}
     </div>

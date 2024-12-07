@@ -7,7 +7,7 @@ import './WaitingRoom.css';
 // Colores de los tanques disponibles
 const TANK_COLORS = ['Azul', 'Verde', 'Morado', 'Amarillo'];
 
-const WaitingRoom = ({ onStartGame }) => {
+const WaitingRoom = ({ onStartGame, roomId }) => {
     const [stompClient, setStompClient] = useState(null);
     const [players, setPlayers] = useState([]);
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
@@ -39,23 +39,27 @@ const WaitingRoom = ({ onStartGame }) => {
     const handleConnect = (client) => {
         console.log('Conectado al servidor');
         setConnectionStatus('connected');
-
-        client.subscribe('/topic/players', (message) => {
+    
+        client.subscribe(`/topic/room/${roomId}/players`, (message) => {
             try {
                 const data = JSON.parse(message.body);
+                console.log("Datos recibidos del servidor:", data);
                 handlePlayerUpdates(data);
             } catch (e) {
                 console.error('Error al procesar mensaje:', e);
             }
         });
-
-        // Solicita la lista actual de jugadores
-        client.publish({ destination: '/app/request-players' });
+    
+        console.log("Solicitando lista de jugadores para sala:", roomId);
+        client.publish({
+            destination: `/app/room/${roomId}/request-players`
+        });
     };
-
+    
     const handlePlayerUpdates = (data) => {
+        console.log("Procesando actualización de jugadores:", data);
         if (Array.isArray(data)) {
-            // Si es un array, actualiza la lista completa de jugadores
+            console.log("Recibida lista completa de jugadores:", data);
             const foundPlayer = data.find((p) => p.name === playerNameInput);
             if (foundPlayer) {
                 setMyPlayerId(foundPlayer.id);
@@ -64,17 +68,15 @@ const WaitingRoom = ({ onStartGame }) => {
             }
             setPlayers(data);
         } else {
-            // Si es un único jugador, actualiza o agrega al jugador
+            console.log("Recibida actualización de un jugador:", data);
             setPlayers((current) => {
-                const existingPlayerIndex = current.findIndex((p) => p.id === data.id);
-                if (existingPlayerIndex !== -1) {
-                    const updatedPlayers = [...current];
-                    updatedPlayers[existingPlayerIndex] = data;
-                    return updatedPlayers;
-                }
-                return [...current, data];
+                const updatedPlayers = current.findIndex((p) => p.id === data.id) !== -1
+                    ? current.map(p => p.id === data.id ? data : p)
+                    : [...current, data];
+                console.log("Nueva lista de jugadores:", updatedPlayers);
+                return updatedPlayers;
             });
-
+    
             if (data.name === playerNameInput) {
                 setMyPlayerId(data.id);
                 setHasJoined(true);
@@ -136,7 +138,7 @@ const WaitingRoom = ({ onStartGame }) => {
 
         try {
             stompClient.publish({
-                destination: '/app/players',
+                destination: `/app/room/${roomId}/players`,
                 body: JSON.stringify(playerData),
             });
         } catch (error) {

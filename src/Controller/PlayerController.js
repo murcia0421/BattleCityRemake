@@ -10,7 +10,7 @@ import GameOverModal from '../components/Winner/GameOverModal';
 
 const MOVEMENT_SPEED = 0.1;
 
-function PlayerController({ playerId, playerName, initialPosition, mapData, tankColor }) {
+function PlayerController({ playerId, playerName, initialPosition, mapData, tankColor, roomId, onRestart }) {
    const [gameState, setGameState] = useState({
        players: {
            [playerId]: { 
@@ -119,8 +119,20 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
 }, [playerId]);
 
 const handleRestart = () => {
-     setShowGameOver(false);
-    // aqui se redirige a la pantalla de salas que aun no existe ok ?
+    if (stompClient?.connected) {
+        stompClient.unsubscribe(`/topic/room/${roomId}/game-updates`);
+        
+        // Sacar a patadas a todos de las salas 
+        stompClient.publish({
+            destination: `/app/room/${roomId}/leave-allplayers`,
+            body: JSON.stringify({
+                roomId: roomId
+            })
+        });
+    }
+    
+    // Volver a la pantalla de inicio
+    onRestart(); 
 };
 
    useEffect(() => {
@@ -136,10 +148,10 @@ const handleRestart = () => {
            setIsConnected(true);
            setStompClient(client);
 
-           client.subscribe('/topic/game-updates', handleGameUpdate);
+           client.subscribe(`/topic/room/${roomId}/game-updates`, handleGameUpdate);
 
            client.publish({
-               destination: '/app/game-join',
+               destination: `/app/room/${roomId}/game-join`,
                body: JSON.stringify({
                    type: 'PLAYER_JOIN',
                    player: { 
@@ -213,7 +225,7 @@ const handleRestart = () => {
            }));
 
            stompClient.publish({
-               destination: '/app/game-move',
+               destination: `/app/room/${roomId}/game-move`,
                body: JSON.stringify({
                    type: 'PLAYER_MOVE',
                    playerId,
@@ -271,6 +283,7 @@ const handleRestart = () => {
                         isCurrentPlayer={player.id === playerId}
                         mapData={mapData}
                         players={gameState.players}
+                        roomId={roomId}
                     />
                 )
                 }

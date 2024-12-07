@@ -4,9 +4,9 @@ import Bullet from '../components/Bullets/Bullet';
 
 const BULLET_SPEED = 0.15;
 
-const publishBulletUpdate = (stompClient, playerId, bullets) => {
+const publishBulletUpdate = (stompClient, playerId, bullets, roomId) => {
     stompClient?.publish({
-        destination: '/app/bullet-update',
+        destination: `/app/room/${roomId}/bullet-update`,
         body: JSON.stringify({
             type: 'BULLET_UPDATE',
             playerId,
@@ -33,7 +33,7 @@ const checkPlayerCollision = (bullet, players = {}) => {
     });
 };
 
-const updateBulletPosition = (bullet, mapData, stompClient, players = {}) => {
+const updateBulletPosition = (bullet, mapData, stompClient, players = {}, roomId) => {
     let { x, y, direction } = bullet;
 
     switch (direction) {
@@ -63,7 +63,7 @@ const updateBulletPosition = (bullet, mapData, stompClient, players = {}) => {
 
     if (hitTile === 1) {
         stompClient?.publish({
-            destination: '/app/wall-hit',
+            destination: `/app/room/${roomId}/wall-hit`,
             body: JSON.stringify({
                 type: 'WALL_HIT',
                 position: { x: tileX, y: tileY },
@@ -72,12 +72,13 @@ const updateBulletPosition = (bullet, mapData, stompClient, players = {}) => {
         return null;
     }
 
+
     if (hitTile === 2) return null;
 
     const hitPlayer = checkPlayerCollision({ ...bullet, x, y }, players);
     if (hitPlayer) {
         stompClient?.publish({
-            destination: '/app/player-hit',
+            destination: `/app/room/${roomId}/player-hit`,
             body: JSON.stringify({
                 type: 'PLAYER_HIT',
                 playerId: hitPlayer.id,
@@ -101,6 +102,7 @@ const BulletController = forwardRef(
             isCurrentPlayer,
             mapData,
             players = {},
+            roomId,
         },
         ref
     ) => {
@@ -136,9 +138,9 @@ const BulletController = forwardRef(
 
         useEffect(() => {
             if (!stompClient?.connected) return;
-            const subscription = stompClient.subscribe('/topic/game-updates', handleGameUpdate);
+            const subscription = stompClient.subscribe(`/topic/room/${roomId}/game-updates`, handleGameUpdate);
             return () => subscription?.unsubscribe();
-        }, [stompClient, handleGameUpdate]);
+        }, [stompClient, handleGameUpdate, roomId]);
 
         const shoot = useCallback(() => {
             if (!isCurrentPlayer || !stompClient?.connected) return;
@@ -168,7 +170,7 @@ const BulletController = forwardRef(
                 direction: playerDirection,
             };
             stompClient.publish({
-                destination: '/app/bullet-fired',
+                destination: `/app/room/${roomId}/bullet-fired`,
                 body: JSON.stringify({
                     type: 'BULLET_FIRED',
                     playerId,
@@ -178,21 +180,20 @@ const BulletController = forwardRef(
         }, [isCurrentPlayer, stompClient, playerId, playerPosition, playerDirection]);
 
         useImperativeHandle(ref, () => ({ shoot }), [shoot]);
-
         useEffect(() => {
             const interval = setInterval(() => {
                 setBullets((prevBullets) => {
                     const updatedBullets = prevBullets
-                        .map((bullet) => updateBulletPosition(bullet, mapData, stompClient, players))
+                        .map((bullet) => updateBulletPosition(bullet, mapData, stompClient, players, roomId))
                         .filter(Boolean);
                     if (isCurrentPlayer && updatedBullets.length !== prevBullets.length) {
-                        publishBulletUpdate(stompClient, playerId, updatedBullets);
+                        publishBulletUpdate(stompClient, playerId, updatedBullets, roomId);
                     }
                     return updatedBullets;
                 });
             }, 16);
             return () => clearInterval(interval);
-        }, [mapData, stompClient, playerId, isCurrentPlayer, players]);
+        }, [mapData, stompClient, playerId, isCurrentPlayer, players, roomId]);
 
         return (
             <>
@@ -205,6 +206,7 @@ const BulletController = forwardRef(
 );
 
 BulletController.propTypes = {
+    roomId: PropTypes.string.isRequired,
     playerId: PropTypes.string.isRequired,
     stompClient: PropTypes.object.isRequired,
     playerPosition: PropTypes.shape({
