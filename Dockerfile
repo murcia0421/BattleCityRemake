@@ -1,27 +1,26 @@
-# Etapa 1: Construcción de la aplicación
-FROM node:18-alpine AS build
+# Usa una imagen ligera de Node.js
+FROM node:18-alpine
 
+
+# Establece el directorio de trabajo en /app
 WORKDIR /app
 
-COPY package*.json ./
 
+# Copia package.json y package-lock.json (si existe) para instalar dependencias
+COPY package.json package-lock.json ./
+
+
+# Instala dependencias
 RUN npm install
 
+
+# Copia todo el código de la aplicación
 COPY . .
 
-RUN npm run build
 
-# Etapa 2: Servir la aplicación con Nginx
-FROM nginx:alpine
+# Expone el puerto que utiliza tu app en modo desarrollo (normalmente 5173 o 3000 con React)
+EXPOSE 3000
 
-# Copia los archivos construidos desde la etapa de construcción
-COPY --from=build /app/build /usr/share/nginx/html
 
-# Copia configuración personalizada de Nginx
-COPY default.conf /etc/nginx/conf.d/default.conf
-
-# Expone el puerto 80
-EXPOSE 80
-
-# Comando para ejecutar Nginx en primer plano
-CMD ["nginx", "-g", "daemon off;"]
+# Ejecuta la aplicación en modo desarrollo
+CMD ["npm", "run", "dev"]
