@@ -3,7 +3,7 @@ const HOST = window.location.host;
 const msalConfig = {
   
   auth: {
-    clientId: "2a26ee58-78b6-465a-85bc-39ff315cd3eb",
+    clientId: "fa7918aa-ebfc-476f-8a95-2c62d2fa3316",
     authority: "https://login.microsoftonline.com/Alfapeople050.onmicrosoft.com",
     redirectUri: `http://${HOST}`,
   },

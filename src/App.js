@@ -9,7 +9,7 @@ function App() {
     const [currentScreen, setCurrentScreen] = useState('waitingRoom');
     const [gamePlayers, setGamePlayers] = useState([]);
 
-    const login = () => {
+    /* login = () => {
         instance.loginPopup({
             scopes: ["user.read"],
         }).catch((error) => console.error(error));
@@ -17,7 +17,7 @@ function App() {
 
     const logout = () => {
         instance.logoutPopup();
-    };
+    };*/
 
     const handleStartGame = (playersOrPlayer) => {
         console.log('Iniciando juego:', playersOrPlayer);
@@ -52,17 +52,10 @@ function App() {
     return (
         <div className="App">
             <h1>Battle City Remake</h1>
-            {accounts.length > 0 ? (
+            {(
                 <div>
                     {renderScreen()}
-                    <button onClick={logout} className="auth-button">
-                        Logout
-                    </button>
                 </div>
-            ) : (
-                <button onClick={login} className="auth-button">
-                    Login
-                </button>
             )}
         </div>
     );
