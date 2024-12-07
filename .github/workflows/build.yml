@@ -33,7 +33,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: cristindavid0124/mi-backend:latest  # Usa tu imagen de Docker Hub
+        tags: imurciag/battlecityremake:latest  # Usa tu imagen de Docker Hub
 
   deploy:
     runs-on: ubuntu-22.04
@@ -42,8 +42,8 @@ jobs:
     steps:
     - name: Deploy to Azure App Service
       env:
-        AZURE_WEBAPP_NAME: "BlackJackRoyaleBackend"  # Nombre del App Service en Azure
-        AZURE_RESOURCE_GROUP: "BlackJackRoyaleApp_group"  # Nombre del grupo de recursos en Azure
+        AZURE_WEBAPP_NAME: "battlecityfront"  # Nombre del App Service en 
+        AZURE_RESOURCE_GROUP: "Battlecity_group"  # Nombre del grupo de recursos en Azure
         AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -55,5 +55,5 @@ jobs:
         az webapp config container set \
           --name $AZURE_WEBAPP_NAME \
           --resource-group $AZURE_RESOURCE_GROUP \
-          --docker-custom-image-name cristindavid0124/mi-backend:latest \
+          --docker-custom-image-name imurciag/battlecityremake:latest \
           --docker-registry-server-url https://index.docker.io/v1/

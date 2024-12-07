@@ -8,7 +8,7 @@ import CollisionUtils from '../utils/collisionUtils';
 import BulletController from './BulletController';
 
 const MOVEMENT_SPEED = 0.1;
-
+const HOST = window.location.host;
 function PlayerController({ playerId, playerName, initialPosition, mapData, tankColor }) {
    const [gameState, setGameState] = useState({
        players: {
@@ -109,7 +109,7 @@ function PlayerController({ playerId, playerName, initialPosition, mapData, tank
    }, [playerId]);
 
    useEffect(() => {
-       const socket = new SockJS('http://localhost:8080/ws');
+       const socket = new SockJS(`http://${HOST}/ws`);
        const client = new Client({
            webSocketFactory: () => socket,
            reconnectDelay: 5000,

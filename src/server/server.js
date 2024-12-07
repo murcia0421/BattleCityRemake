@@ -9,7 +9,7 @@ const mapData = require('../components/Map/MapData'); // Importar datos del mapa
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
-
+const HOST = window.location.host;
 let players = {}; // Almacena la información de los jugadores
 const collisionUtils = new CollisionUtils(mapData); // Instanciar CollisionUtils con los datos del mapa
 
@@ -66,5 +66,5 @@ const calculateNewPosition = (currentPosition, direction) => {
 };
 
 server.listen(8080, () => {
-    console.log('Servidor escuchando en http://localhost:8080');
+    console.log('Servidor escuchando en' + `http://${HOST}`);
 });

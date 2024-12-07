@@ -6,7 +6,7 @@ import './WaitingRoom.css';
 
 // Colores de los tanques disponibles
 const TANK_COLORS = ['Azul', 'Verde', 'Morado', 'Amarillo'];
-
+const HOST = window.location.host;
 const WaitingRoom = ({ onStartGame }) => {
     const [stompClient, setStompClient] = useState(null);
     const [players, setPlayers] = useState([]);
@@ -18,7 +18,7 @@ const WaitingRoom = ({ onStartGame }) => {
 
     // Configura la conexión WebSocket al montar el componente
     useEffect(() => {
-        const socket = new SockJS('http://localhost:8080/ws');
+        const socket = new SockJS(`http://${HOST}/ws`);
         const client = new Client({
             webSocketFactory: () => socket,
             reconnectDelay: 5000,

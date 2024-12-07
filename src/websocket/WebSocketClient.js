@@ -7,8 +7,9 @@ class WebSocketClient {
     static onErrorCallback = null;
     static onCloseCallback = null;
     static eventCallbacks = {}; // Almacenar callbacks de eventos
+    static HOST = window.location.host;
 
-    static initialize(onMessage, onError = null, onClose = null, serverUrl = 'ws://localhost:3000', retryDelay = 3000) {
+    static initialize(onMessage, onError = null, onClose = null, serverUrl = `ws://${HOST}:3000`, retryDelay = 3000) {
         if (this.isReconnecting) return;
         this.isReconnecting = true;
         this.onMessageCallback = onMessage;
