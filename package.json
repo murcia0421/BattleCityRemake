@@ -5,7 +5,7 @@
   "dependencies": {
     "@azure/msal-browser": "^3.27.0",
     "@azure/msal-react": "^2.2.0",
-    "@stomp/stompjs": "^7.0.0",
+    "@stomp/stompjs": "^7.0.1",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
